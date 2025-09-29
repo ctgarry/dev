@@ -1,0 +1,7 @@
+## Interface: 11505
+## Title: WinterChecklist
+## Notes: Simple daily/weekly checklist with automatic resets.
+## Author: CTGarry
+## Version: 1.2.1
+## SavedVariablesPerCharacter: WinterChecklistDB
+WinterChecklist.lua

@@ -1,0 +1,22 @@
+{
+"name": "WinterChecklist Dev",
+"image": "mcr.microsoft.com/devcontainers/base:jammy",
+"features": {
+"ghcr.io/devcontainers/features/git:1": {},
+"ghcr.io/devcontainers/features/cmake:1": {},
+"ghcr.io/devcontainers/features/ninja:1": {}
+},
+"workspaceFolder": "/work/WinterChecklist",
+"workspaceMount": "source=${localWorkspaceFolder},target=/work/WinterChecklist,type=bind,consistency=cached",
+"postCreateCommand": "set -e; apt-get update && apt-get install -y build-essential ca-certificates && rm -rf /var/lib/apt/lists/*; mkdir -p /work && cd /work && (git clone --depth 1 https://github.com/wowless/wowless.git || true); cd /work/wowless && git submodule update --init --depth 1 && cmake --preset default",
+"customizations": {
+"vscode": {
+"extensions": [
+"ms-vscode-remote.remote-containers",
+"ms-azuretools.vscode-docker",
+"sumneko.lua",
+"ketho.wow-api"
+]
+}
+}
+}

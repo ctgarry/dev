@@ -1,0 +1,17 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Build/packaging artifacts
+*.zip
+*.tar.gz
+
+# Logs
+*.log
+
+# (Keep these in repo)
+# .devcontainer/      <-- keep (dev container config)
+# .vscode/tasks.json  <-- keep if you want shared tasks

@@ -45,9 +45,14 @@ NS.ICON_REG = NS.ICON_REG or {
     size      = 16,
     padW      = 10,
   },
-  -- Add more icons later (link, refresh, etc.)
-  -- link = { unicode="🔗", texture="Interface\\ICONS\\INV_Misc_Map07", size=16, padW=10 },
-  -- refresh = { unicode="⟳", texture="Interface\\Buttons\\UI-RefreshButton", size=16, padW=10 },
+  arrow = {
+    unicode   = "→",                                      -- U+2192 (Retail fonts usually have it)
+    texture   = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up", -- Classic-safe right arrow
+    size      = 12,
+    padW      = 4,
+    texCoords = {8/64, 56/64, 8/64, 56/64},               -- crop border so it looks clean
+  },
+    -- Add more icons later as needed
 }
 
 -- Return a text token for SetText(): Retail -> unicode, Classic -> |T...|t
@@ -131,6 +136,23 @@ StaticPopupDialogs["WINTERCHECKLIST_COPY_LINK"] = {
   EditBoxOnEscapePressed = function(self)
     self:GetParent():Hide()
   end,
+}
+
+StaticPopupDialogs["WCL_COPY_CONFIRM"] = {
+  text = "", -- set at runtime
+  button1 = YES,
+  button2 = NO,
+  OnShow = function(self, data)
+    self.text:SetText(data and data.msg or "")
+  end,
+  OnAccept = function(self, data)
+    if not data or not data.srcTasks then return end
+    local db2 = EnsureDB()
+    db2.tasks = DeepCopyTasks(data.srcTasks)
+    UI.RefreshTaskList()
+    SyncProfileSnapshot()
+  end,
+  timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
 local function ShowCopyLinkPopup(url)
@@ -241,6 +263,18 @@ local function MakeOpaqueBackground(frame)
   return bg
 end
 
+local function ResetTasks(kind)
+  local db = EnsureDB()
+  for _, t in ipairs(db.tasks) do
+    if kind == "all"
+       or (kind == "daily"  and t.frequency == "daily")
+       or (kind == "weekly" and t.frequency == "weekly") then
+      t.completed = false
+    end
+  end
+  UI.RefreshTaskList(); SyncProfileSnapshot()
+end
+
 ----------------------------------------------------------------------
 -- Small popups (Prompt / Import / Export / Confirm)
 ----------------------------------------------------------------------
@@ -284,24 +318,30 @@ local function SimplePrompt(parent, title, initialText, onOK)
 end
 
 local function BuildHelpBodyText()
+  local arrow = NS.IconText("arrow", { size = 12 })  -- Retail: "→", Classic: texture
   return table.concat({
     "|cffffff00Quick UI how-to|r",
     "• Use the search box to filter tasks.",
     "• Radio buttons at the bottom filter: All / Daily / Weekly.",
     "• + to add, E to edit selected, - to delete.",
-    "• Click a task’s checkbox to mark complete/incomplete.",
+    "• Right-click a row for actions.",
+    "• Click a task's checkbox to mark complete/incomplete.",
     "• Drag the window by its title; drag the bottom-right corner to resize.",
-    "• Zone button opens the world map.",
+    ("• Zone button %s opens the world map."):format(arrow),
     "• Minimap button toggles this window (can be hidden in AddOns options).",
     "",
     "|cffffff00Commands|r",
-    "/wcl  -> toggle the window",
-    "/wcl add <text>  -> add a daily task",
-    "/wcl addw <text> -> add a weekly task",
-    "/wcl minimap     -> toggle the minimap button",
+    ("/wcl %s toggle the window"):format(arrow),
+    ("/wcl add <text> %s add a daily task"):format(arrow),
+    ("/wcl addw <text> %s add a weekly task"):format(arrow),
+    ("/wcl minimap %s toggle the minimap button"):format(arrow),
+    ("/wcl reset %s reset all tasks to incomplete"):format(arrow),
+    ("/wcl reset daily %s reset only daily tasks."):format(arrow),
+    ("/wcl reset weekly %s reset only weekly tasks."):format(arrow),
+    ("/wcl help %s show this help"):format(arrow),
     "",
     "|cffffd200Developer Notes|r",
-    "If the window looks off-screen or something seems stuck, hard-reset:",
+    "Quick reset: |cffffff78/wcl fixframe|r resets size & position. Or hard reset with:",
     "|cffaaaaaa/run if WinterChecklistDB then WinterChecklistDB.window=nil end ReloadUI()|r",
   }, "\n")
 end
@@ -315,12 +355,18 @@ local function ToggleHelp(parent)
 
   local h = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
   h:SetSize(380, 420)
+  h:SetClampedToScreen(true)
+
   if closeBtn then
+    -- Position so the HELP CONTENT's TOPLEFT is ~8px right, 6px down of the addon's X.
     h:ClearAllPoints()
-    h:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 8, -6) -- anchor near the X button
+    h:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 0, 22)
   else
-    h:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 8, 0)
+    -- Fallback: open to the right of the addon
+    h:ClearAllPoints()
+    h:SetPoint("TOPLEFT", parent, "TOPRIGHT", 8, -30)
   end
+
   if h.TitleText then h.TitleText:SetText("Checklist — Help") end
   MakeOpaqueBackground(h)
 
@@ -370,11 +416,6 @@ local function ParseTasks(s)
   return list
 end
 
-local function CloseImportExport()
-  if UI.popImport then UI.popImport:Hide() end
-  if UI.popExport then UI.popExport:Hide() end
-end
-
 local function ShowExport(parent)
   HideAllPopups()
   local db = EnsureDB()
@@ -409,13 +450,13 @@ local function ShowExport(parent)
   f:Show()
 end
 
--- Import confirmation
-StaticPopupDialogs = StaticPopupDialogs or {}
+-- Import confirmation (NO reassignment of StaticPopupDialogs)
 StaticPopupDialogs["WCL_IMPORT_CONFIRM"] = {
   text = "Import will delete all the current tasks and replace them with the imported list. Are you sure?",
   button1 = "Yes",
   button2 = "No",
-  OnAccept = function(data)
+  OnAccept = function(self, data)
+    if not data or not data.list then return end
     local db = EnsureDB()
     db.tasks = data.list
     UI.RefreshTaskList()
@@ -535,17 +576,15 @@ local function ToggleGear(parent)
   local bRD = CreateFrame("Button", nil, g, "UIPanelButtonTemplate")
   bRD:SetSize(140, 22); bRD:SetPoint("TOPLEFT", bExp, "BOTTOMLEFT", 0, -6); bRD:SetText("Reset Daily")
   bRD:SetScript("OnClick", function()
-    local db = EnsureDB()
-    for _,t in ipairs(db.tasks) do if t.frequency == "daily" then t.completed = false end end
-    g:Hide(); UI.RefreshTaskList(); SyncProfileSnapshot()
+    ResetTasks("daily")
+    g:Hide()
   end)
 
   local bRW = CreateFrame("Button", nil, g, "UIPanelButtonTemplate")
   bRW:SetSize(140, 22); bRW:SetPoint("TOPLEFT", bRD, "BOTTOMLEFT", 0, -6); bRW:SetText("Reset Weekly")
   bRW:SetScript("OnClick", function()
-    local db = EnsureDB()
-    for _,t in ipairs(db.tasks) do if t.frequency == "weekly" then t.completed = false end end
-    g:Hide(); UI.RefreshTaskList(); SyncProfileSnapshot()
+    ResetTasks("weekly")
+    g:Hide()
   end)
 
   UI.gear = g
@@ -573,7 +612,9 @@ local function CreateResizeGrip(frame, db)
   grip:SetScript("OnMouseDown", function(self) self:GetParent():StartSizing("BOTTOMRIGHT") end)
   grip:SetScript("OnMouseUp", function(self)
     local p = self:GetParent(); p:StopMovingOrSizing()
-    db.window.w, db.window.h = p:GetSize()
+    local d = EnsureDB()
+    d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = UI.frame and UI.frame:IsShown() or true }
+    d.window.w, d.window.h = p:GetSize()
   end)
 end
 
@@ -591,9 +632,15 @@ local function CreateMainFrame(db)
     self:StopMovingOrSizing()
     local px, py = UIParent:GetCenter()
     local x,  y  = self:GetCenter()
-    db.window.x, db.window.y = x - px, y - py
+    local d = EnsureDB()
+    d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = UI.frame and UI.frame:IsShown() or true }
+    d.window.x, d.window.y = x - px, y - py
   end)
-  f:SetScript("OnSizeChanged", function(self, w, h) db.window.w, db.window.h = w, h end)
+  f:SetScript("OnSizeChanged", function(self, w, h)
+    local d = EnsureDB()
+    d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = UI.frame and UI.frame:IsShown() or true }
+    d.window.w, d.window.h = w, h
+  end)
   if f.TitleText then f.TitleText:SetText("Checklist") end
   CreateResizeGrip(f, db)
 
@@ -614,13 +661,14 @@ local function CreateMainFrame(db)
   local function MakeBtn(label, w)
     local b = CreateFrame("Button", nil, top, "UIPanelButtonTemplate")
     b:SetSize(w or 28, 22)
-    NS.ApplyIcon(b, "link", { textAfter = " " .. label })
+    b:SetText(label)
     return b
   end
+
   local bAdd  = MakeBtn("+")
   local bEdit = MakeBtn("E")
   local bDel  = MakeBtn("-")
-  local bGear = NS.SmallIconBtn(top, "gear", "Tools / Import/Export")
+  local bGear = NS.SmallIconBtn(top, "gear", "Tools / Import/Export") -- icon-only (keep)
   local bHelp = MakeBtn("?")
 
   -- layout: right-align buttons, search fills remaining
@@ -782,7 +830,7 @@ end
 local function SetRowSelected(i, selected)
   local row = UI.rows[i]; if not row then return end
   row.selBG:SetShown(selected)
-  row.text:SetTextColor(selected and 1 or 1, selected and 0.95 or 1, selected and 0.6 or 1, 1)
+  row.text:SetTextColor(selected and 1 or 0.9, selected and 0.95 or 0.9, selected and 0.6 or 0.9, 1)
 end
 
 function UI.RefreshTaskList()
@@ -878,7 +926,12 @@ local function CreateMinimapButton(db)
   local border = btn:CreateTexture(nil, "OVERLAY"); border:SetAllPoints(); border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
 
   btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
-  btn:SetScript("OnClick", function() if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end; db.window.shown = UI.frame:IsShown() end)
+  btn:SetScript("OnClick", function()
+    local d = EnsureDB()
+    if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
+    d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = true }
+    d.window.shown = UI.frame:IsShown()
+  end)
   btn:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT"); GameTooltip:SetText("Checklist",1,1,1); GameTooltip:AddLine("Left-click to toggle window.", .8,.8,.8); GameTooltip:Show() end)
   btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
   UI.minimap = btn
@@ -904,38 +957,65 @@ local function CreateOptionsPanel(db)
   helpText:SetPoint("TOPLEFT"); helpText:SetWidth(560); helpText:SetJustifyH("LEFT")
   helpText:SetText(BuildHelpBodyText())
 
-  -- Minimap checkbox + Open button (no collision)
-  local cb = CreateFrame("CheckButton", nil, panel, "InterfaceOptionsCheckButtonTemplate")
-  cb:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 16, 140)
+  -- Bottom area container (everything below the help scroll lives here)
+  local bottomArea = CreateFrame("Frame", nil, panel)
+  bottomArea:SetPoint("TOPLEFT", helpScroll, "BOTTOMLEFT", 0, -12)
+  bottomArea:SetPoint("TOPRIGHT", helpScroll, "BOTTOMRIGHT", 0, -12)
+  bottomArea:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -16, 16)
+  bottomArea:SetPoint("BOTTOMLEFT",  panel, "BOTTOMLEFT",  16, 16)
+
+  -- Row 1: Minimap checkbox + Open button
+  local cb = CreateFrame("CheckButton", nil, bottomArea, "InterfaceOptionsCheckButtonTemplate")
+  cb:SetPoint("TOPLEFT", bottomArea, "TOPLEFT", 0, 0)
   cb.Text:SetText("Show minimap button")
   cb:SetChecked(db.showMinimap ~= false)
-  cb:SetScript("OnClick", function(self) db.showMinimap = self:GetChecked(); UpdateMinimapVisibility(db) end)
+  cb:SetScript("OnClick", function(self)
+    db.showMinimap = self:GetChecked()
+    UpdateMinimapVisibility(db)
+  end)
 
-  local open = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-  open:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 0, -8)
-  open:SetSize(160, 22); open:SetText("Open Checklist")
-  open:SetScript("OnClick", function() if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end; db.window.shown = UI.frame:IsShown() end)
+  local open = CreateFrame("Button", nil, bottomArea, "UIPanelButtonTemplate")
+  open:SetSize(160, 22)
+  open:ClearAllPoints()
+  open:SetPoint("TOPRIGHT", bottomArea, "TOPRIGHT", 0, 0)
+  open:SetPoint("TOP", cb, "TOP", 0, 0)
 
-  -- Profile management (copy from other character)
-  local profTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-  profTitle:SetPoint("TOPLEFT", open, "BOTTOMLEFT", 0, -16)
+  -- Make the checkbox label stop before the button
+  cb.Text:ClearAllPoints()
+  cb.Text:SetPoint("LEFT",  cb,      "RIGHT", 4, 0)
+  cb.Text:SetPoint("RIGHT", open,    "LEFT", -12, 0)
+  cb.Text:SetWordWrap(false)  -- prevent wrapping into the button
+
+  open:SetText("Toggle Checklist")
+  open:SetScript("OnClick", function()
+    local d = EnsureDB()
+    if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
+    d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = true }
+    d.window.shown = UI.frame:IsShown()
+  end)
+
+  -- Row 2: Profile management
+  local profTitle = bottomArea:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  profTitle:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 0, -12)
   profTitle:SetText("Profile Management (per character):")
 
-  local dropdown = CreateFrame("Frame", "WinterChecklistProfileDropdown", panel, "UIDropDownMenuTemplate")
+  local dropdown = CreateFrame("Frame", "WinterChecklistProfileDropdown", bottomArea, "UIDropDownMenuTemplate")
+  UIDropDownMenu_SetWidth(dropdown, 220)   -- make the dropdown a predictable width
+  dropdown:ClearAllPoints()
   dropdown:SetPoint("TOPLEFT", profTitle, "BOTTOMLEFT", -16, -6)
+
   local selectedKey = nil
 
   local function RefreshDropdown()
     local adb = EnsureAccountDB()
-    local items = {}
-    local selfKey = CurrentCharKey()
+    local items, selfKey = {}, CurrentCharKey()
     for key, val in pairs(adb.profiles or {}) do
       if key ~= selfKey and val.tasks and #val.tasks > 0 then table.insert(items, key) end
     end
     table.sort(items)
     UIDropDownMenu_SetText(dropdown, selectedKey or "Select a character profile")
     UIDropDownMenu_Initialize(dropdown, function(self, level)
-      for _,key in ipairs(items) do
+      for _, key in ipairs(items) do
         local info = UIDropDownMenu_CreateInfo()
         info.text = key
         info.func = function() selectedKey = key; UIDropDownMenu_SetText(dropdown, key) end
@@ -944,43 +1024,40 @@ local function CreateOptionsPanel(db)
     end)
   end
 
-  local copyBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-  copyBtn:SetPoint("LEFT", dropdown, "RIGHT", 0, 0)
-  copyBtn:SetSize(160, 22); copyBtn:SetText("Copy From Selected")
+  local copyBtn = CreateFrame("Button", nil, bottomArea, "UIPanelButtonTemplate")
+  copyBtn:SetSize(160, 22)
+  copyBtn:ClearAllPoints()
+  copyBtn:SetPoint("TOP",   dropdown,   "TOP",   0, 0)   -- y aligned to dropdown
+  copyBtn:SetPoint("RIGHT", bottomArea, "RIGHT", 0, 0)   -- x pinned to right edge
+  copyBtn:SetText("Copy From Selected")
   copyBtn:SetScript("OnClick", function()
     if not selectedKey then Print("Select a profile to copy from."); return end
     local adb = EnsureAccountDB()
     local src = adb.profiles[selectedKey]
     if not (src and src.tasks and #src.tasks > 0) then Print("Selected profile is empty."); return end
-    StaticPopupDialogs["WCL_COPY_CONFIRM"] = {
-      text = ("Copying will replace ALL tasks on %s with tasks from %s. Are you sure?"):format(CurrentCharKey(), selectedKey),
-      button1 = "Yes", button2 = "No",
-      OnAccept = function()
-        local db = EnsureDB()
-        db.tasks = DeepCopyTasks(src.tasks)
-        UI.RefreshTaskList(); SyncProfileSnapshot()
-      end,
-      timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
-    }
-    StaticPopup_Show("WCL_COPY_CONFIRM")
+    local msg = ("Copying will replace ALL tasks on %s with tasks from %s. Are you sure?"):format(
+      CurrentCharKey(), selectedKey
+    )
+    StaticPopup_Show("WCL_COPY_CONFIRM", nil, nil, { msg = msg, srcTasks = src.tasks })
   end)
 
-  -- Contributors (always below help content)
-  local contrib = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-  contrib:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 16, 52)
-  contrib:SetText("Active Contributors: |cffffffffbcgarry, wizardowl, beahbabe|r")
-
-  -- Links section header
-  local linksTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-  linksTitle:SetPoint("TOPLEFT", copyBtn, "BOTTOMLEFT", - (copyBtn:GetWidth() - 160), -18)
+  -- Row 3: Links
+  local linksTitle = bottomArea:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  linksTitle:SetPoint("TOPLEFT", dropdown, "BOTTOMLEFT", 16, -16)
   linksTitle:SetText("Links")
 
-  -- Helper to make a link button that opens the Blizzard-style copy popup
-  local function MakeLinkButton(parent, label, url, tooltip, xOffset)
+  -- Keep your helper but parent to bottomArea and use LINK icon
+  local function MakeLinkButton(parent, label, url, tooltip, relTo, xOffset)
     local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     b:SetSize(120, 22)
-    b:SetPoint("TOPLEFT", linksTitle, "BOTTOMLEFT", xOffset or 0, -6)
+    b:SetPoint("TOPLEFT", relTo, "BOTTOMLEFT", xOffset or 0, -6)
+
+    -- OLD:
+    -- NS.ApplyIcon(b, "link", { textAfter = " " .. label })
+    -- NEW (plain text):
     b:SetText(label)
+    b:SetWidth(math.max(120, b:GetTextWidth() + 24))  -- keeps a nice padding
+
     b:SetScript("OnClick", function() ShowCopyLinkPopup(url) end)
     b:SetScript("OnEnter", function(self)
       GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -992,26 +1069,29 @@ local function CreateOptionsPanel(db)
     return b
   end
 
-  -- Row of link buttons (Blizzard StaticPopup handles exclusivity)
-  MakeLinkButton(
-    panel,
-    "Curse",
-    "https://www.curseforge.com/wow/addons/checklist",
-    "Click this button to copy the URL to get the CHECKLIST addon from Curse.",
-    0
+  local curseBtn = MakeLinkButton(
+    bottomArea, "Curse",
+    "www.curseforge.com/wow/addons/checklist",
+    "Click to copy the CurseForge page URL.",
+    linksTitle, 0
   )
-  MakeLinkButton(
-    panel,
-    "GitHub",
-    "https://github.com/ctgarry/dev/tree/main/WinterChecklist",
-    "Click this button to copy the URL to get to the CHECKLIST addon source code.",
-    128
+  local gitBtn = MakeLinkButton(
+    bottomArea, "GitHub",
+    "github.com/ctgarry/dev/tree/main/WinterChecklist",
+    "Click to copy the addon source URL.",
+    linksTitle, 128
   )
 
-  -- Finalize & register
-  RefreshDropdown()
+  -- Row 4: Contributors (stacks below the link buttons)
+  local belowLinks = gitBtn  -- whichever is lower/last; either is fine since both are same height
+  local contrib = bottomArea:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  contrib:SetPoint("TOPLEFT", belowLinks, "BOTTOMLEFT", 0, -12)
+  contrib:SetText("Active Contributors: |cffffffffbcgarry, wizardowl, beahbabe|r")
+
+  -- Keep dropdown fresh when Options opens
   panel:SetScript("OnShow", RefreshDropdown)
 
+  -- Finalize & register
   if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
     local category = Settings.RegisterCanvasLayoutCategory(panel, "Checklist")
     Settings.RegisterAddOnCategory(category)
@@ -1040,9 +1120,12 @@ SLASH_WINTERCHECKLIST2 = "/checklist"
 SlashCmdList["WINTERCHECKLIST"] = function(msg)
   local db = EnsureDB()
   msg = STrim(msg or "")
+
   if msg == "" or msg == "toggle" then
+    local d = EnsureDB()
     if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
-    db.window.shown = UI.frame:IsShown()
+    d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = true }
+    d.window.shown = UI.frame:IsShown()
   elseif msg:sub(1, 4) == "add " then
     local text = STrim(msg:sub(5))
     if IsEmpty(text) then Print("Cannot add a blank task.") else
@@ -1059,8 +1142,25 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     db.showMinimap = not (db.showMinimap == false)
     UpdateMinimapVisibility(db)
     Print("Minimap button "..(db.showMinimap and "shown" or "hidden")..".")
+  elseif msg == "help" then
+    ToggleHelp(UI.frame or UIParent)
+  elseif msg == "reset" or msg == "reset all" then
+    ResetTasks("all");    Print("All tasks reset to incomplete.")
+  elseif msg == "reset daily" then
+    ResetTasks("daily");  Print("All daily tasks reset to incomplete.")
+  elseif msg == "reset weekly" then
+    ResetTasks("weekly"); Print("All weekly tasks reset to incomplete.")
+  elseif msg == "fixframe" or msg == "resetframe" then
+    db.window = { w = 460, h = 500, x = 0, y = 0, shown = true }
+    if UI.frame then
+      UI.frame:ClearAllPoints()
+      UI.frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+      UI.frame:SetSize(460, 500)
+      UI.frame:Show()
+    end
+    Print("Frame reset to default size & centered.")
   else
-    Print("Commands: /wcl (toggle), /wcl add <text>, /wcl addw <text>, /wcl minimap")
+    Print("Commands: /wcl (toggle), /wcl add <text>, /wcl addw <text>, /wcl minimap, /wcl reset [daily|weekly|all], /wcl fixframe, /wcl help")
   end
 end
 
@@ -1084,6 +1184,15 @@ ev:SetScript("OnEvent", function(self, event)
     -- Restore position/visibility
     UI.frame:ClearAllPoints()
     UI.frame:SetPoint("CENTER", UIParent, "CENTER", db.window.x or 0, db.window.y or 0)
+
+    -- clamp size to screen (in case saved size is too big)
+    local scrW, scrH = UIParent:GetWidth(), UIParent:GetHeight()
+    local minW, minH = 360, 320
+    local maxW, maxH = math.max(minW, scrW - PAD*2), math.max(minH, scrH - PAD*2)
+    local w = math.min(math.max(db.window.w or 460, minW), maxW)
+    local h = math.min(math.max(db.window.h or 500, minH), maxH)
+    UI.frame:SetSize(w, h)
+
     if db.window.shown == false then UI.frame:Hide() else UI.frame:Show() end
 
     UI.RefreshTaskList()

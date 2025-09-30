@@ -10,7 +10,8 @@ local ADDON, NS = ...
 -- Constants & small utils
 ----------------------------------------------------------------------
 local PAD = 10
-local BOTTOM_BAR_H = 48 -- space for radios + zone + refresh
+local BOTTOM_BAR_H = 72   -- was 48; room for Filter row + radios + buttons
+local ROW_H, ROW_GAP = 22, 6
 local function STrim(s) if not s then return "" end return (s:gsub("^%s+",""):gsub("%s+$","")) end
 local function IsEmpty(s) return STrim(s) == "" end
 local function Print(msg) DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Checklist|r: "..(msg or "")) end
@@ -346,30 +347,31 @@ local function BuildHelpBodyText()
   }, "\n")
 end
 
+local function ParseTasksStrict(s)
+  local list = {}
+  local ln = 0
+  for line in (s.."\n"):gmatch("([^\n]*)\n") do
+    ln = ln + 1
+    local L = STrim(line)
+    if not IsEmpty(L) then
+      local tag, rest = L:match("^([dDwW])%s*:%s*(.+)$")
+      if not tag then return nil, ln end
+      local freq = (tag == "w" or tag == "W") and "weekly" or "daily"
+      table.insert(list, { text = rest, frequency = freq, completed = false })
+    end
+  end
+  return list, nil
+end
+
 -- Reuse the exact same anchor spot (near the frame's X button)
 local function AnchorPopupNearClose(popup, parent)
   local f = parent or UI.frame
-  if not f then
-    popup:ClearAllPoints()
-    popup:SetPoint("CENTER", UIParent) -- ultimate fallback
-    return
-  end
-
-  -- Robust close button lookup (works across Retail/Classic variants)
-  local btn = f.CloseButton
-  if not btn and f.GetName then
-    local n = f:GetName()
-    if n then btn = _G[n .. "CloseButton"] end
-  end
-
   popup:ClearAllPoints()
-
-  if btn then
-    -- Exact: popout to the right of the X, slightly below it
-    popup:SetPoint("TOPLEFT", btn, "BOTTOMRIGHT", 8, -6)
+  local closeBtn = f and _G[((f:GetName() or "") .. "CloseButton")]
+  if closeBtn then
+    popup:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 8, -6)
   else
-    -- Graceful fallback: outside the frame, to the right, aligned with header
-    popup:SetPoint("TOPLEFT", f, "TOPRIGHT", 8, -22)
+    popup:SetPoint("TOPRIGHT", f or UIParent, "TOPRIGHT", 8, 0)
   end
 end
 
@@ -441,16 +443,24 @@ end
 local function ShowExport(parent)
   HideAllPopups()
   local db = EnsureDB()
-  local w = math.max(340, math.min(parent:GetWidth() - 40, 560))
+  local w = math.max(340, math.min((parent or UI.frame):GetWidth() - 40, 560))
 
-  local f = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
+  local f = CreateFrame("Frame", nil, parent or UI.frame, "BasicFrameTemplateWithInset")
   f:SetSize(w, 260)
-  f:SetPoint("CENTER", parent, "CENTER")
-  if f.TitleText then f.TitleText:SetText("Export Tasks — Copy") end
+  AnchorPopupNearClose(f, parent or UI.frame)
+  if f.TitleText then f.TitleText:SetText("Export Tasks") end
   MakeOpaqueBackground(f)
+  f:SetFrameStrata("DIALOG"); f:SetToplevel(true); f:SetResizable(false)
+
+  -- Note line (same wording as your StaticPopup)
+  local note = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  note:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -38)
+  note:SetWidth(w - 48)
+  note:SetJustifyH("LEFT")
+  note:SetText("Ctrl+A, Ctrl+C to Copy to your Clipboard.")
 
   local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-  sf:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -28)
+  sf:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -60)
   sf:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -28, 36)
 
   local eb = CreateFrame("EditBox", nil, sf)
@@ -492,16 +502,24 @@ StaticPopupDialogs["WCL_IMPORT_CONFIRM"] = {
 
 local function ShowImport(parent)
   HideAllPopups()
-  local w = math.max(340, math.min(parent:GetWidth() - 40, 560))
+  local w = math.max(340, math.min((parent or UI.frame):GetWidth() - 40, 560))
 
-  local f = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
+  local f = CreateFrame("Frame", nil, parent or UI.frame, "BasicFrameTemplateWithInset")
   f:SetSize(w, 300)
-  f:SetPoint("CENTER", parent, "CENTER")
-  if f.TitleText then f.TitleText:SetText("Import Tasks — One per line (prefix with d: or w:)") end
+  AnchorPopupNearClose(f, parent or UI.frame)
+  if f.TitleText then f.TitleText:SetText("Import Tasks") end
   MakeOpaqueBackground(f)
+  f:SetFrameStrata("DIALOG"); f:SetToplevel(true); f:SetResizable(false)
+
+  -- Note line
+  local note = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  note:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -38)
+  note:SetWidth(w - 48)
+  note:SetJustifyH("LEFT")
+  note:SetText("Format: one task per line, prefixed with 'd:' or 'w:'. Example:\n  d: Turn in daily\n  w: Kill world boss")
 
   local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-  sf:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -28)
+  sf:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -74)
   sf:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -28, 36)
 
   local eb = CreateFrame("EditBox", nil, sf)
@@ -519,8 +537,11 @@ local function ShowImport(parent)
   cancel:SetSize(90, 22); cancel:SetText("Cancel")
 
   ok:SetScript("OnClick", function()
-    local list = ParseTasks(eb:GetText() or "")
-    if #list == 0 then Print("Nothing to import."); return end
+    local list, badLn = ParseTasksStrict(eb:GetText() or "")
+    if not list then
+      Print(("Import cancelled: line %d must begin with 'd:' or 'w:'."):format(badLn))
+      return
+    end
     StaticPopup_Hide("WCL_IMPORT_CONFIRM")
     StaticPopup_Show("WCL_IMPORT_CONFIRM", nil, nil, { list = list })
   end)
@@ -788,6 +809,25 @@ local function CreateMainFrame(db)
   bottom:SetPoint("BOTTOM", f, "BOTTOM", 0, PAD/2)
   bottom:SetHeight(BOTTOM_BAR_H - PAD/2)
 
+  -- Filter (row above radios)
+  local filterLabel = bottom:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  filterLabel:SetPoint("BOTTOMLEFT", bottom, "BOTTOMLEFT", 0, 44)
+  filterLabel:SetText("Filter:")
+
+  local search = CreateFrame("EditBox", nil, bottom, "InputBoxTemplate")
+  search:SetAutoFocus(false)
+  search:SetHeight(22)
+  search:SetPoint("LEFT", filterLabel, "RIGHT", 6, 0)
+  search:SetPoint("RIGHT", bottom, "RIGHT", 0, 44)
+  search:SetText("")                  -- always blank at startup
+  UI.controls.search = search
+  UI.searchTerm = ""
+
+  search:SetScript("OnTextChanged", function(self)
+    UI.searchTerm = self:GetText() or ""
+    UI.RefreshTaskList()
+  end)
+
   -- Radios
   local radios = CreateFrame("Frame", nil, bottom)
   radios:SetSize(260, 22)
@@ -840,8 +880,9 @@ end
 ----------------------------------------------------------------------
 -- Rendering (rows, highlight, context)
 ----------------------------------------------------------------------
+
 local function ApplyFilters(db)
-  local q = db.search and db.search:lower() or nil
+  local q = UI.searchTerm and UI.searchTerm:lower() or nil
   local out = {}
   for _, t in ipairs(db.tasks) do
     local okMode = TaskPassesFilter(t, db.filterMode)
@@ -849,6 +890,12 @@ local function ApplyFilters(db)
     if okMode and okSearch then table.insert(out, t) end
   end
   return out
+end
+
+local function ClearFilterAndRefresh()
+  UI.searchTerm = ""
+  if UI.controls and UI.controls.search then UI.controls.search:SetText("") end
+  UI.RefreshTaskList()
 end
 
 local function SetRowSelected(i, selected)

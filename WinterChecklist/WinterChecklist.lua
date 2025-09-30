@@ -349,12 +349,27 @@ end
 -- Reuse the exact same anchor spot (near the frame's X button)
 local function AnchorPopupNearClose(popup, parent)
   local f = parent or UI.frame
-  local closeBtn = f and _G[(f:GetName() or "") .. "CloseButton"]
+  if not f then
+    popup:ClearAllPoints()
+    popup:SetPoint("CENTER", UIParent) -- ultimate fallback
+    return
+  end
+
+  -- Robust close button lookup (works across Retail/Classic variants)
+  local btn = f.CloseButton
+  if not btn and f.GetName then
+    local n = f:GetName()
+    if n then btn = _G[n .. "CloseButton"] end
+  end
+
   popup:ClearAllPoints()
-  if closeBtn then
-    popup:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 8, -6)
+
+  if btn then
+    -- Exact: popout to the right of the X, slightly below it
+    popup:SetPoint("TOPLEFT", btn, "BOTTOMRIGHT", 8, -6)
   else
-    popup:SetPoint("TOPRIGHT", f or UIParent, "TOPRIGHT", 8, 0)
+    -- Graceful fallback: outside the frame, to the right, aligned with header
+    popup:SetPoint("TOPLEFT", f, "TOPRIGHT", 8, -22)
   end
 end
 
@@ -364,7 +379,15 @@ local function ToggleHelp(parent)
 
   local h = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
   h:SetSize(380, 420)
-  AnchorPopupNearClose(h, parent)  -- same spot as gear
+  AnchorPopupNearClose(h, parent)
+
+  -- ✨ polish tweaks:
+  h:SetFrameStrata("DIALOG")
+  h:SetToplevel(true)
+  h:SetResizable(false)
+  C_Timer.After(0, function()
+    if h and h:IsShown() then AnchorPopupNearClose(h, parent) end
+  end)
 
   if h.TitleText then h.TitleText:SetText("Checklist — Help") end
   MakeOpaqueBackground(h)
@@ -553,7 +576,15 @@ local function ToggleGear(parent)
 
   local g = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
   g:SetSize(180, 140)
-  AnchorPopupNearClose(g, parent)  -- identical anchor to Help
+  AnchorPopupNearClose(g, parent)
+
+  -- ✨ polish tweaks:
+  g:SetFrameStrata("DIALOG")
+  g:SetToplevel(true)
+  g:SetResizable(false)
+  C_Timer.After(0, function()
+    if g and g:IsShown() then AnchorPopupNearClose(g, parent) end
+  end)
 
   if g.TitleText then g.TitleText:SetText("Checklist — Tools") end
   MakeOpaqueBackground(g)

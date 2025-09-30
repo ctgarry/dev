@@ -346,26 +346,25 @@ local function BuildHelpBodyText()
   }, "\n")
 end
 
+-- Reuse the exact same anchor spot (near the frame's X button)
+local function AnchorPopupNearClose(popup, parent)
+  local f = parent or UI.frame
+  local closeBtn = f and _G[(f:GetName() or "") .. "CloseButton"]
+  popup:ClearAllPoints()
+  if closeBtn then
+    popup:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 8, -6)
+  else
+    popup:SetPoint("TOPRIGHT", f or UIParent, "TOPRIGHT", 8, 0)
+  end
+end
+
 local function ToggleHelp(parent)
   if UI.help and UI.help:IsShown() then UI.help:Hide(); return end
   HideAllPopups()
 
-  local f = parent
-  local closeBtn = _G[(f:GetName() or "") .. "CloseButton"]
-
   local h = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
   h:SetSize(380, 420)
-  h:SetClampedToScreen(true)
-
-  if closeBtn then
-    -- Position so the HELP CONTENT's TOPLEFT is ~8px right, 6px down of the addon's X.
-    h:ClearAllPoints()
-    h:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 0, 22)
-  else
-    -- Fallback: open to the right of the addon
-    h:ClearAllPoints()
-    h:SetPoint("TOPLEFT", parent, "TOPRIGHT", 8, -30)
-  end
+  AnchorPopupNearClose(h, parent)  -- same spot as gear
 
   if h.TitleText then h.TitleText:SetText("Checklist — Help") end
   MakeOpaqueBackground(h)
@@ -552,16 +551,10 @@ local function ToggleGear(parent)
   if UI.gear and UI.gear:IsShown() then UI.gear:Hide(); return end
   HideAllPopups()
 
-  local f = parent
-  local closeBtn = _G[(f:GetName() or "") .. "CloseButton"]
-
   local g = CreateFrame("Frame", nil, parent, "BasicFrameTemplateWithInset")
   g:SetSize(180, 140)
-  if closeBtn then
-    g:SetPoint("TOPLEFT", closeBtn, "BOTTOMRIGHT", 8, -6)
-  else
-    g:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 8, 0)
-  end
+  AnchorPopupNearClose(g, parent)  -- identical anchor to Help
+
   if g.TitleText then g.TitleText:SetText("Checklist — Tools") end
   MakeOpaqueBackground(g)
 
@@ -914,26 +907,52 @@ local function UpdateMinimapVisibility(db) if UI.minimap then UI.minimap:SetShow
 
 local function CreateMinimapButton(db)
   if UI.minimap or not Minimap then return end
+
+  -- 31x31 is the “classic” minimap button footprint
   local btn = CreateFrame("Button", "WinterChecklist_MinimapButton", Minimap)
-  btn:SetSize(30, 30); btn:SetFrameStrata("LOW"); btn:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 4, -4)
+  btn:SetSize(31, 31)
+  btn:SetFrameStrata("MEDIUM")
+  btn:SetFrameLevel(8)
+  btn:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 4, -4)
 
-  local icon = btn:CreateTexture(nil, "ARTWORK"); icon:SetAllPoints()
-  icon:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
-  local bg = btn:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(1,1,1,1)
-  local mask = btn:CreateMaskTexture(nil, "OVERLAY"); mask:SetAllPoints()
-  mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-  bg:AddMaskTexture(mask); icon:AddMaskTexture(mask)
-  local border = btn:CreateTexture(nil, "OVERLAY"); border:SetAllPoints(); border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+  -- Big golden ring (oversized so it reads as a circle)
+  local ring = btn:CreateTexture(nil, "OVERLAY")
+  ring:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+  ring:SetSize(54, 54)
+  ring:SetPoint("TOPLEFT", 0, 0)
 
-  btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+  -- Dark circular background disk
+  local back = btn:CreateTexture(nil, "BACKGROUND")
+  back:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+  back:SetSize(20, 20)
+  back:SetPoint("TOPLEFT", 7, -5)
+
+  -- The actual icon
+  local icon = btn:CreateTexture(nil, "ARTWORK")
+  icon:SetTexture("Interface\\Buttons\\UI-CheckBox-Check") -- use your own texture here if you add one
+  icon:SetSize(17, 17)
+  icon:SetPoint("TOPLEFT", 7, -6)
+  icon:SetTexCoord(0.1, 0.9, 0.1, 0.9) -- crop corners so it sits nicely in the circle
+  UI.minimapIcon = icon
+
+  -- Standard highlight ring
+  btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight", "ADD")
+
   btn:SetScript("OnClick", function()
     local d = EnsureDB()
     if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
     d.window = d.window or { w = 460, h = 500, x = 0, y = 0, shown = true }
     d.window.shown = UI.frame:IsShown()
   end)
-  btn:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT"); GameTooltip:SetText("Checklist",1,1,1); GameTooltip:AddLine("Left-click to toggle window.", .8,.8,.8); GameTooltip:Show() end)
+
+  btn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
+    GameTooltip:SetText("Checklist", 1, 1, 1)
+    GameTooltip:AddLine("Left-click to toggle window.", .8, .8, .8)
+    GameTooltip:Show()
+  end)
   btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
   UI.minimap = btn
   UpdateMinimapVisibility(db)
 end

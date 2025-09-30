@@ -20,6 +20,82 @@ local function SafeSetResizeBounds(frame, minW, minH, maxW, maxH)
   elseif frame.SetMinResize then frame:SetMinResize(minW, minH) end
 end
 
+-- ------------------------------------------------------------
+-- Cross-version Icon Helpers (Retail unicode / Classic texture)
+-- ------------------------------------------------------------
+local IS_RETAIL = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
+
+NS.ICON_REG = NS.ICON_REG or {
+  gear = {
+    unicode   = "⚙",                                -- U+2699 (Retail fonts usually have it)
+    texture   = "Interface\\Buttons\\UI-OptionsButton",
+    size      = 16,
+    texCoords = {5/64, 59/64, 5/64, 59/64},         -- crop border
+    padW      = 10,
+  },
+  link = {
+    unicode   = "🔗",                                -- Retail: U+1F517
+    texture   = "Interface\\ICONS\\INV_Misc_Map_01", -- Classic-safe generic link/map icon
+    size      = 16,
+    padW      = 10,
+  },
+  refresh = {
+    unicode   = "⟳",                                 -- Retail: U+27F3
+    texture   = "Interface\\Buttons\\UI-RefreshButton", -- Falls back to texture on Classic
+    size      = 16,
+    padW      = 10,
+  },
+  -- Add more icons later (link, refresh, etc.)
+  -- link = { unicode="🔗", texture="Interface\\ICONS\\INV_Misc_Map07", size=16, padW=10 },
+  -- refresh = { unicode="⟳", texture="Interface\\Buttons\\UI-RefreshButton", size=16, padW=10 },
+}
+
+-- Return a text token for SetText(): Retail -> unicode, Classic -> |T...|t
+function NS.IconText(key, opts)
+  opts = opts or {}
+  local ic = NS.ICON_REG[key]; if not ic then return "" end
+  if IS_RETAIL and ic.unicode and not opts.forceTexture then
+    return ic.unicode
+  end
+  local size = opts.size or ic.size or 16
+  local l, r, t, b = 0, 1, 0, 1
+  if ic.texCoords then l, r, t, b = unpack(ic.texCoords) end
+  return ("|T%s:%d:%d:0:0:64:64:%d:%d:%d:%d|t"):
+    format(ic.texture, size, size, l*64, r*64, t*64, b*64)
+end
+
+-- Apply icon (and optional label) to a button with :SetText
+-- opts: size, textAfter, textBefore, forceTexture, padW
+function NS.ApplyIcon(btn, key, opts)
+  opts = opts or {}
+  local ic = NS.ICON_REG[key]; if not ic then return end
+  local padW = (opts.padW ~= nil and opts.padW) or ic.padW or 8
+  local icon = NS.IconText(key, opts)
+  local txt = (opts.textBefore or "") .. icon .. (opts.textAfter or "")
+  if btn.SetText then btn:SetText(txt) end
+  if (opts.textAfter or opts.textBefore) and btn.GetTextWidth then
+    btn:SetWidth(math.max(btn:GetTextWidth() + 16, (opts.size or ic.size or 16) + padW + 12))
+  else
+    btn:SetWidth((opts.size or ic.size or 16) + padW + 4)
+  end
+end
+
+-- Convenience creator for small icon buttons
+function NS.SmallIconBtn(parent, key, tooltip, opts)
+  local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+  b:SetHeight(26)
+  NS.ApplyIcon(b, key, opts)
+  if tooltip then
+    b:SetScript("OnEnter", function(self)
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:SetText(tooltip, 1,1,1,1,true)
+      GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  end
+  return b
+end
+
 local function ToggleWorldMapGeneric()
   if ToggleWorldMap then ToggleWorldMap(); return end
   if WorldMapFrame then
@@ -538,13 +614,13 @@ local function CreateMainFrame(db)
   local function MakeBtn(label, w)
     local b = CreateFrame("Button", nil, top, "UIPanelButtonTemplate")
     b:SetSize(w or 28, 22)
-    b:SetText(label)
+    NS.ApplyIcon(b, "link", { textAfter = " " .. label })
     return b
   end
   local bAdd  = MakeBtn("+")
   local bEdit = MakeBtn("E")
   local bDel  = MakeBtn("-")
-  local bGear = MakeBtn("⚙", 28)  -- gear menu
+  local bGear = NS.SmallIconBtn(top, "gear", "Tools / Import/Export")
   local bHelp = MakeBtn("?")
 
   -- layout: right-align buttons, search fills remaining
@@ -679,7 +755,7 @@ local function CreateMainFrame(db)
   local refreshBtn = CreateFrame("Button", nil, bottom, "UIPanelButtonTemplate")
   refreshBtn:SetPoint("BOTTOMRIGHT", bottom, "BOTTOMRIGHT", 0, 0)
   refreshBtn:SetSize(110, 22)
-  refreshBtn:SetText("Refresh")
+  NS.ApplyIcon(refreshBtn, "refresh", { textAfter = " Refresh" })
   refreshBtn:SetScript("OnClick", function() UI.RefreshTaskList() end)
   UI.controls.refresh = refreshBtn
 

@@ -1,9 +1,11 @@
 # OS cruft
 .DS_Store
 Thumbs.db
+*.lnk
 
-# VS Code
+# internal directories
 .vscode/
+.links/
 
 # Build/packaging artifacts
 *.zip

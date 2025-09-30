@@ -4,4 +4,5 @@
 ## Author: CTGarry
 ## Version: 1.2.1
 ## SavedVariablesPerCharacter: WinterChecklistDB
+## SavedVariables: WinterChecklistAccountDB
 WinterChecklist.lua

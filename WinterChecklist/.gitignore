@@ -3,9 +3,10 @@
 Thumbs.db
 *.lnk
 
-# internal directories
+# internal items
 .vscode/
 .links/
+dev-notes.txt
 
 # Build/packaging artifacts
 *.zip
@@ -15,5 +16,4 @@ Thumbs.db
 *.log
 
 # (Keep these in repo)
-# .devcontainer/      <-- keep (dev container config)
 # .vscode/tasks.json  <-- keep if you want shared tasks

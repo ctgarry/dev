@@ -1,6 +1,5 @@
 ##########
 # Let's take a pause here and think about our direction.
-##########
 
     In the beginning there was darkness and then this conversation came along and tried to create a light that would be a lightweight WoW addon in LUA. There was success, and I saw that iterating on the addon created more success. But after a time you and I both saw that it was taking time to load the addon into the actual game and try it out.
 
@@ -12,7 +11,7 @@
 
 ##########
 # About Love2D
-##########
+
     https://www.youtube.com/watch?v=kpxkQldiNPU
     https://www.love2d.org
     C:\Program Files\LOVE
@@ -21,7 +20,6 @@
 
 ##########
 # Environment
-##########
 
     The path to the program is in C:\Program Files\LOVE  ...  
 
@@ -33,7 +31,6 @@
 
 ##########
 #More direction
-##########
 
     With that all in mind, now let's switch back to the VS Code interface and make sure that we can use the command palette to see whatever we have accomplished so far in Powershell. And then we'll get a path forward for testing UI elements in Love2d
 
@@ -45,7 +42,6 @@
 
 ##########
 # How to run:
-##########
 
 Press Ctrl+Shift+P → Tasks: Run Task.
 
@@ -71,7 +67,6 @@ Notes:
 
 ##########
 # Silence the devcontainer error (done)
-##########
 
     Since we’re not using “Reopen in Container” anymore:
 
@@ -83,7 +78,6 @@ Notes:
 
 ##########
 # Daily flow (recommended)
-##########
 
     Edit your addon Lua in VS Code.
 
@@ -96,3 +90,76 @@ Notes:
     Alt-tab to the game and /reload.
 
     That’s it—now you’ve got a fast visual loop (Love2D) plus quick CLI verification (Wowless) and one-click deploys to the real client.
+
+##########
+# Steps (done)
+
+• Add a small guard so blank tasks can’t be added.
+• “Reset Daily” / “Reset Weekly” buttons (uncheck all in that filter).
+• Import/Export (copy tasks to/from a text box).
+• Remove the legacy db.filter key so only filterMode is stored.
+• Make the window remember its position across sessions.
+• Make the window remember its size across sessions.
+• Make a little more room for the filter radio button row.
+• make the clickable Zone thing into a standard button-looking one.
+• make sure the contents of the help button appear in the Options>Addons>Checklist window.
+• Make sure the help content has no transparency.
+• Make sure the help button content has a close button, bottom left. 
+• If possible I prefer the help button content be dismissable with an escape key, if it has 
+focus.
+• make sure that if a task list gets long that it scrolls under the filter/zone area.
+• make sure that the Options>Addons>Checklist window has additional content that is not in the help screen: 
+
+	•• The first of this additional content should the bottommost section being a section for "Active Contributors: bcgarry, wizardowl, beahbabe" This content should always be below the content that is repeated in the Help button.
+
+	•• Below that should be a row of buttons that function to copy to clipboard when clicked. 
+		The starting list of buttons should be:
+		 - "Curse" 
+			Its copy string should be https://www.curseforge.com/wow/addons/checklist 
+			It's tooltip should be "Click this button to copy the URL to get the CHECKLIST addon from Curse."
+		 - GutHub 
+			Its copy string should be https://github.com/ctgarry/dev/tree/main/WinterChecklist
+			It's tooltip should be "Click this button to copy the URL to get to the CHECKLIST addon sourcecode."
+		NOTE WELL: This button content should always be last.
+• the minimap button needs an image. right now it's text paper thingy that is not even round. Maybe a soft-edged checkmark.
+
+
+##########
+# Previous requests that did not seem to get implemented:
+
+• Row highlight on click (so it’s obvious which task “Edit/-” will affect).
+
+• Right-click a task → quick menu: “Make Daily/Weekly”, “Delete”.
+
+• if a commandline changes the tasklist, then it should automatically refresh the addon window.
+
+
+##########
+# Next Steps
+
+• Make sure the help content opens to the right of the addon in a non-resizeable window, anchoring the top left of the content very near the bottom right of the X button. 
+
+• Store addon task content on a per-character basis and treat it like a "profile". Add "profile management" in the Options>Addons>Checklist window. Profile management means listing all known characters on the account that have a Checklist profile; allow a user to copy from another profile to replace all their current tasks; "Copy from" should be allowed only after a "are you sure you want to replace all your current tasks" confirmation.
+
+• import and export should be dismissble by escape
+
+• when the six existing buttons don't wrap to a second line they are all bunched on top of each other.
+
+• the export and import windows should not be wider than the main window.
+
+• → is not supported in the help content. use something else.
+
+• opening import should dismiss export
+
+• opening export should dismiss import
+
+• committing import should warn "Import will delete all the current tasks, are you sure?"
+
+• import, export, reset daily and reset weekly should all be removed from the user interface into a gear menu. that should pop up anchor the same way as the help menu and be mutually exlusive to all other popup windows and dialogs.
+
+• in the Options>Addons>Checklist window, the show minimap checkbox is colliding with the  "open checklist" button.
+
+• the buttons for Curse and Github, and future buttons like them, should be mutually exclusive (opening one, closes all others). Each should be a child of the Options>Addons>Checklist settings window. Not a child of the addon which could be anywhere on the screen or not even showing.
+
+I prefer you produce unified WinterChecklist.lua in its entirety (I don't want to add code bit-by-bit), since this is such a massive change request. You have the latest already.
+

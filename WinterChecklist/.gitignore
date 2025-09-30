@@ -4,13 +4,15 @@ Thumbs.db
 *.lnk
 
 # internal items
-.vscode/
+.bak/
 .links/
 .notes/
+.vscode/
 
 # Build/packaging artifacts
 *.zip
 *.tar.gz
+*.bak
 
 # Logs
 *.log

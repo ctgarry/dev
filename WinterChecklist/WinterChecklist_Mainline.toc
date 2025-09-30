@@ -5,4 +5,12 @@
 ## Version: 1.2.1
 ## SavedVariablesPerCharacter: WinterChecklistDB
 ## SavedVariables: WinterChecklistAccountDB
-WinterChecklist.lua
+
+util.lua        # shared helpers, icons, small utils; creates/uses NS
+storage.lua     # EnsureDB, profiles, snapshot helpers
+filters.lua     # mode-aware + search filtering
+tasks.lua       # select/edit/delete/reset task ops
+ui.lua          # builds frames, buttons, dialogs; exports NS.* UI funcs
+import.lua      # import dialog (opaque + Esc)
+export.lua      # export dialog (opaque + Esc)
+core.lua        # event frame + slash: calls NS.OnReady, NS.RefreshUI(), etc.

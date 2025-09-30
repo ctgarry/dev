@@ -6,7 +6,7 @@ Thumbs.db
 # internal items
 .vscode/
 .links/
-**/dev-notes.txt
+.notes/
 
 # Build/packaging artifacts
 *.zip

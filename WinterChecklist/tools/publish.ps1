@@ -1,65 +1,113 @@
+<#
+  publish.ps1
+  - Stages in %TEMP% (avoids Dropbox/AV locks)
+  - TOC-only build from the chosen .toc
+  - Always stages EXACTLY ONE TOC named <ADDON_NAME>.toc
+  - Optional install copies staged files to AddOns
+#>
+
 param(
-  [ValidateSet("Retail","ClassicEra")] [string]$Flavor = "Retail",
+  [ValidateSet('Retail','ClassicEra')]
+  [string]$Flavor = 'ClassicEra',
   [switch]$Install,
-  [string]$AddOnsDir
+  [string]$AddOnsDir,
+  [string]$Toc  # optional explicit override
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 
-$RepoRoot = Split-Path -Parent $PSScriptRoot
-$AddonName = "WinterChecklist"
-$OutDir   = Join-Path $RepoRoot "dist"
-New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+# Robust path resolution
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Path $MyInvocation.MyCommand.Path -Parent }
+$RepoRoot  = Split-Path -Path $ScriptDir -Parent
 
-# Pick the TOC for the flavor
-$TocFile = if ($Flavor -eq "Retail") {
-  Join-Path $RepoRoot "WinterChecklist_Mainline.toc"
+# Addon name from env (fallback)
+$AddonName = if ($env:ADDON_NAME) { $env:ADDON_NAME } else { 'WinterChecklist' }
+
+function Resolve-Toc {
+  param([string]$RepoRoot, [string]$Flavor, [string]$AddonName)
+  if ($Flavor -eq 'Retail') {
+    $candidates = @("$AddonName.toc")
+  } else {
+    $candidates = @("${AddonName}_ClassicEra.toc", "${AddonName}_Classic.toc")
+  }
+  foreach ($c in $candidates) {
+    $p = Join-Path -Path $RepoRoot -ChildPath $c
+    if (Test-Path -LiteralPath $p) { return $p }
+  }
+  throw "TOC not found for $Flavor. Tried: $($candidates -join ', ')"
+}
+
+# Locate TOC
+if ($Toc) {
+  $TocPath = if ([System.IO.Path]::IsPathRooted($Toc)) { $Toc } else { Join-Path -Path $RepoRoot -ChildPath $Toc }
+  if (-not (Test-Path -LiteralPath $TocPath)) { throw "Specified -Toc not found: $TocPath" }
 } else {
-  Join-Path $RepoRoot "WinterChecklist_Vanilla.toc"
+  $TocPath = Resolve-Toc -RepoRoot $RepoRoot -Flavor $Flavor -AddonName $AddonName
 }
 
-if (!(Test-Path $TocFile)) { throw "TOC not found: $TocFile" }
+# Parse TOC into file list (ignore comments/metadata/blank)
+$raw = Get-Content -LiteralPath $TocPath -ErrorAction Stop
+$files = $raw |
+  Where-Object { $_ -and $_ -notmatch '^\s*(#|//|;|##|\s*$)' } |
+  ForEach-Object { $_.Split('#')[0].Trim() } |
+  Where-Object { $_ -ne '' }
 
-# Extract Version from TOC
-$Version = (Select-String -Path $TocFile -Pattern '^\s*##\s*Version:\s*(.+)$').Matches.Groups[1].Value.Trim()
-if (-not $Version) { $Version = (Get-Date -Format "yyyy.MM.dd.HHmm") }
+# Version from TOC or timestamp
+$Version = ($raw | Where-Object { $_ -match '^\s*##\s*Version\s*:\s*(.+)$' } |
+  ForEach-Object { ($Matches[1]).Trim() } | Select-Object -First 1)
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = (Get-Date -Format 'yyyy.MM.dd.HHmm') }
 
-# Stage into temp dir
-$Stage = Join-Path ([System.IO.Path]::GetTempPath()) ("{0}-stage-{1}" -f $AddonName, [guid]::NewGuid().ToString("N"))
-$StageAddon = Join-Path $Stage $AddonName
-New-Item -ItemType Directory -Force -Path $StageAddon | Out-Null
+# Stage in %TEMP%
+$stageRootBase = Join-Path -Path $env:TEMP -ChildPath ("WCStage-{0}-{1}-{2}" -f $Flavor, $AddonName, [System.Guid]::NewGuid())
+$stageRoot     = Join-Path -Path $stageRootBase -ChildPath $AddonName
+New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
 
-# Files to include (adjust if you add more)
-$include = @(
-  "WinterChecklist.lua",
-  "WinterChecklist_Mainline.toc",
-  "WinterChecklist_Vanilla.toc",
-  "LICENSE.txt",
-  "README.md"
-)
-foreach ($rel in $include) {
-  $src = Join-Path $RepoRoot $rel
-  if (Test-Path $src) { Copy-Item $src -Destination $StageAddon -Force }
+foreach ($rel in $files) {
+  $src = Join-Path -Path $RepoRoot -ChildPath $rel
+  if (-not (Test-Path -LiteralPath $src)) { Write-Warning "Missing from TOC: $rel"; continue }
+  $dst = Join-Path -Path $stageRoot -ChildPath $rel
+  New-Item -ItemType Directory -Force -Path (Split-Path -Path $dst) | Out-Null
+  Copy-Item -LiteralPath $src -Destination $dst -Force
 }
 
-# Build zip
-$ZipName = "{0}-v{1}-{2}.zip" -f $AddonName, $Version, $Flavor
-$ZipPath = Join-Path $OutDir $ZipName
-if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
-Compress-Archive -Path (Join-Path $StageAddon '*') -DestinationPath $ZipPath -Force
+# ALWAYS stage exactly one TOC named <ADDON_NAME>.toc
+$targetToc = Join-Path -Path $stageRoot -ChildPath ($AddonName + '.toc')
+Copy-Item -LiteralPath $TocPath -Destination $targetToc -Force
 
-Write-Host "Built: $ZipPath"
+# Build ZIP in dist/
+$distDir = Join-Path -Path $RepoRoot -ChildPath "dist"
+New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+$zipName = "$AddonName-v$Version-$Flavor.zip"
+$zipPath = Join-Path -Path $distDir -ChildPath $zipName
 
-# Optional install to WoW AddOns
-if ($Install) {
-  if (-not $AddOnsDir) { throw "-Install requires -AddOnsDir '...\\Interface\\AddOns'" }
-  if (!(Test-Path $AddOnsDir)) { throw "AddOns dir not found: $AddOnsDir" }
-  $Target = Join-Path $AddOnsDir $AddonName
-  if (Test-Path $Target) { Remove-Item $Target -Recurse -Force }
-  New-Item -ItemType Directory -Force -Path $Target | Out-Null
-  Copy-Item (Join-Path $StageAddon '*') -Destination $Target -Recurse -Force
-  Write-Host "Installed to: $Target"
+function Invoke-WithRetry {
+  param([scriptblock]$Script, [int]$Tries = 5, [int]$DelayMs = 200)
+  for ($i=1; $i -le $Tries; $i++) {
+    try { & $Script; return } catch { if ($i -eq $Tries) { throw }; Start-Sleep -Milliseconds ($DelayMs * $i) }
+  }
 }
 
-# Cleanup
-Remove-Item $Stage -Recurse -Force
+Invoke-WithRetry { Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue | Out-Null }
+$stageGlob = Join-Path -Path $stageRoot -ChildPath '*'
+Invoke-WithRetry { Compress-Archive -Path $stageGlob -DestinationPath $zipPath -CompressionLevel Optimal }
+Write-Host "Built: $zipPath"
+
+# Optional install
+try {
+  if ($Install) {
+    if (-not $AddOnsDir) { throw "-Install requires -AddOnsDir" }
+    $dest = Join-Path -Path $AddOnsDir -ChildPath $AddonName
+    New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    Copy-Item -Path (Join-Path -Path $stageRoot -ChildPath '*') -Destination $dest -Recurse -Force
+
+    # Ensure ONLY one TOC exists: <ADDON_NAME>.toc
+    Get-ChildItem -LiteralPath $dest -Filter '*.toc' |
+      Where-Object { $_.Name -ne ($AddonName + '.toc') } |
+      Remove-Item -Force -ErrorAction SilentlyContinue
+
+    Write-Host "Installed (TOC-only) to: $dest"
+  }
+}
+finally {
+  Remove-Item -LiteralPath $stageRootBase -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+}

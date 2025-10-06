@@ -48,10 +48,16 @@ if ($Toc) {
 # Parse TOC into file list (ignore comments/metadata/blank)
 $raw = Get-Content -LiteralPath $TocPath -ErrorAction Stop
 $files = $raw |
-  Where-Object { $_ -and $_ -notmatch '^\s*(#|//|;|##|\s*$)' } |
+  Where-Object {
+    $_ -and
+    ($_ -notmatch '(?i)(^|[\\/])\.git([\\/]|$)')     -and
+    ($_ -notmatch '(?i)(^|[\\/])\.github([\\/]|$)')  -and
+    ($_ -notmatch '(?i)(^|[\\/])\.tools([\\/]|$)')   -and
+    ($_ -notmatch '(?i)(^|[\\/])\.dist([\\/]|$)')
+  } |
   ForEach-Object { $_.Split('#')[0].Trim() } |
   Where-Object { $_ -ne '' }
-
+  
 # Version from TOC or timestamp
 $Version = ($raw | Where-Object { $_ -match '^\s*##\s*Version\s*:\s*(.+)$' } |
   ForEach-Object { ($Matches[1]).Trim() } | Select-Object -First 1)
@@ -71,11 +77,25 @@ foreach ($rel in $files) {
 }
 
 # ALWAYS stage exactly one TOC named <ADDON_NAME>.toc
-$targetToc = Join-Path -Path $stageRoot -ChildPath ($AddonName + '.toc')
+$targetToc = Join-Path -Path $stageRoot -ChildPath ("{0}.toc" -f $AddonName)
 Copy-Item -LiteralPath $TocPath -Destination $targetToc -Force
 
+# Stage docs/media files (.md, .xml if docs, any .blp/.png/.tga in doc tree if present)
+$stageExts   = '(?i)\.(?:toc|lua|xml|blp|tga|png|md)$'
+$excludeDirs = '(?i)(^|[\\/])(?:\.git|\.github|\.tools|\.dist)([\\/]|$)'
+
+$files = Get-ChildItem -Path $RepoRoot -Recurse -File |
+  Where-Object { $_.Name -match $stageExts -and $_.FullName -notmatch $excludeDirs }
+foreach ($f in $files) {
+  $rel  = $f.FullName.Substring($RepoRoot.Length).TrimStart('\','/')
+  $dest = Join-Path -Path $stageRoot -ChildPath $rel
+  $destDir = Split-Path $dest -Parent
+  if (!(Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+  Copy-Item -LiteralPath $f.FullName -Destination $dest -Force
+}
+
 # Build ZIP in dist/
-$distDir = Join-Path -Path $RepoRoot -ChildPath "dist"
+$distDir = Join-Path -Path $RepoRoot -ChildPath ".dist"
 New-Item -ItemType Directory -Force -Path $distDir | Out-Null
 $zipName = "$AddonName-v$Version-$Flavor.zip"
 $zipPath = Join-Path -Path $distDir -ChildPath $zipName
@@ -98,7 +118,7 @@ try {
     if (-not $AddOnsDir) { throw "-Install requires -AddOnsDir" }
     $dest = Join-Path -Path $AddOnsDir -ChildPath $AddonName
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    Copy-Item -Path (Join-Path -Path $stageRoot -ChildPath '*') -Destination $dest -Recurse -Force
+    Copy-Item -Path (Join-Path -Path $stageRoot -ChildPath '*') -Destination $dest -Recurse -Exclude '.git','.github','.tools','.dist' -Force
 
     # Ensure ONLY one TOC exists: <ADDON_NAME>.toc
     Get-ChildItem -LiteralPath $dest -Filter '*.toc' |

@@ -7,18 +7,18 @@ local ADDON, NS = ...
 
 -- ===== Constants (avoid magic numbers) =====
 local C = {
-  WIDTH            = 400,
-  HEIGHT           = 240,
+  WIDTH            = 480,
+  HEIGHT           = 360,
   PAD              = 12,
   EDGE_SIZE        = 12,
-  EDIT_HEIGHT      = 150,
+  EDIT_HEIGHT      = 260, -- unused with scrollframe, but keep as fallback
   NOTE_OFFSET_Y    = -12,
-  EDIT_OFFSET_Y    = -40,
+  EDIT_OFFSET_Y    = -36,
   CLOSE_W          = 80,
   CLOSE_H          = 22,
-  CLOSE_OFFSET_X   = -12,
-  CLOSE_OFFSET_Y   = 12,
+  CLOSE_OFFSET_Y   = 10,
 }
+
 
 -- ===== Strict localization helper (no display fallbacks) =====
 local L = NS.L or {}
@@ -47,13 +47,23 @@ local function showDialog(parent)
   note:SetWidth(C.WIDTH - (2 * C.PAD))
   note:SetText(T("EXPORT_NOTE"))
 
-  -- Multiline edit box for the export payload
-  local eb = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
+  -- Scrollable edit area for the export payload
+  local scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", C.PAD, C.EDIT_OFFSET_Y)
+  scroll:SetPoint("BOTTOMRIGHT", -C.PAD - 24, C.CLOSE_H + C.CLOSE_OFFSET_Y + 8)
+
+  local eb = CreateFrame("EditBox", nil, scroll)
   eb:SetMultiLine(true)
-  eb:SetSize(C.WIDTH - (2 * C.PAD), C.EDIT_HEIGHT)
-  eb:SetPoint("TOPLEFT", C.PAD, C.EDIT_OFFSET_Y)
   eb:SetAutoFocus(true)
+  eb:EnableMouse(true)
+  eb:SetWidth(C.WIDTH - (2 * C.PAD) - 24)
+  eb:SetFontObject("ChatFontNormal")
   eb:SetScript("OnEscapePressed", function() frame:Hide() end)
+  eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+
+  scroll:SetScrollChild(eb)
+  NS._expBox = eb
+  NS._exp = frame
 
   -- Close button
   local close = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")

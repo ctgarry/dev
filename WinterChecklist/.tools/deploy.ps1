@@ -43,14 +43,54 @@ if ($Install) {
   $dest = Join-Path -Path $AddOnsDir -ChildPath $AddonName
   if (-not (Test-Path -LiteralPath $dest)) { New-Item -ItemType Directory -Force -Path $dest | Out-Null }
 
+    # sanity: baseToc must be a single filename, no wildcards
+  if ($baseToc -match '[\*\?\[]') {
+    throw "Destination TOC path cannot contain wildcards: $baseToc"
+  }
+
   # If there's no base-named TOC yet, try to copy from repo
+  Write-Host "cand  = $cand"
+  Write-Host "baseToc = $baseToc"
   $baseToc = Join-Path -Path $dest -ChildPath ($AddonName + '.toc')
   if (-not (Test-Path -LiteralPath $baseToc)) {
     $repoRoot = Split-Path -Path $Here -Parent
     $cand = @("$AddonName.toc", "${AddonName}_ClassicEra.toc", "${AddonName}_Classic.toc") |
       ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ } |
       Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    if ($cand) { Copy-Item -LiteralPath $cand -Destination $baseToc -Force }
+    if ($cand) {
+      # --- begin: resolve TOC candidate & validate names ---
+      # Trim quotes if -Toc "..." was passed
+      $cand = $cand.Trim('"')
+
+      # Resolve $cand to exactly one file. If it's a pattern, use -Path; if not, use -LiteralPath.
+      if ($cand -match '[\*\?\[]') {
+        $candCandidates = @(Get-ChildItem -Path $cand -ErrorAction SilentlyContinue)
+      } else {
+        $candCandidates = @(Get-ChildItem -LiteralPath $cand -ErrorAction SilentlyContinue)
+      }
+
+      if ($candCandidates.Count -eq 0) {
+        throw "TOC not found: $cand"
+      }
+      if ($candCandidates.Count -gt 1) {
+        throw "Ambiguous -Toc '$cand' matched $($candCandidates.Count) files:`n$($candCandidates.FullName -join "`n")"
+      }
+      $cand = $candCandidates[0].FullName
+
+      # Validate the output filename (guards against colon, *, ?, etc.)
+      $baseDir  = Split-Path -Path $baseToc -Parent
+      $baseName = [IO.Path]::GetFileName($baseToc)
+      if ($baseName.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0) {
+        throw "Invalid character in output TOC name '$baseName'. Check ADDON_NAME in .vscode/tasks.json."
+      }
+      # --- end: resolve TOC candidate & validate names ---
+
+      # Ensure destination dir exists, then copy
+      if (-not (Test-Path -LiteralPath $baseDir)) {
+        New-Item -ItemType Directory -Force -Path $baseDir | Out-Null
+      }
+      Copy-Item -LiteralPath $cand -Destination $baseToc -Force
+    }
   }
 
   # Remove any other .toc variants

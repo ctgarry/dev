@@ -62,7 +62,7 @@ end
 ----------------------------------------------------------------------
 -- Reset completion flags by kind: "all" | "daily" | "weekly"
 function NS.ResetTasks(kind)
-  local db = (NS.EnsureDB and NS.EnsureDB()) or EnsureDB()
+  local db = NS.EnsureDB()
   local k = type(kind) == "string" and kind:lower() or "all"
 
   for _, t in ipairs(db.tasks or {}) do

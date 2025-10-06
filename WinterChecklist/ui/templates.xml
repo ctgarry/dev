@@ -1,0 +1,5 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Button name="WC_ToolbarButtonTemplate" inherits="UIPanelButtonTemplate" virtual="true">
+    <Size><AbsDimension x="24" y="24"/></Size>
+  </Button>
+</Ui>

@@ -1,0 +1,11 @@
+## Interface: 11403
+## Title: WinterChecklist
+## Notes: 1.5 Classic Era patch — keeps minimap + options; safe init & lock
+## Author: CTG
+## Version: 1.5.0
+## SavedVariables: WinterChecklistDB
+
+init.lua
+ui_core.lua
+minimap.lua
+options.lua

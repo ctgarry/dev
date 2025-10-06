@@ -2,7 +2,17 @@
 -- Purpose: Bootstrap WinterChecklist, wire slash commands, and handle world/zone/login/logout events.
 -- Scope: No UI layout here; just init, persistence, and user commands. Strict localization (no fallbacks).
 
-local ADDON, NS = ...
+local ADDON_NAME, NS = ...
+NS.name = ADDON_NAME
+
+NS.DB = NS.DB or {}
+NS.UI = NS.UI or {}
+NS.UI.controls = NS.UI.controls or {}
+
+-- tiny logger
+function NS.Debug(...)
+  if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("|cff7fdfff[WinterChecklist]|r "..table.concat({tostringall(...)}, " ")) end
+end
 
 -- ===== Constants (avoid magic numbers) =====
 local DEFAULT_WIDTH  = 460
@@ -24,17 +34,23 @@ NS.UI = NS.UI or {}
 local f = CreateFrame("Frame")
 NS.frame = f
 
+-- --- NEW: safe wrapper so we never touch UI before it's built
+local function SafeUpdateZoneText()
+  if NS.UpdateZoneText and NS.UI and NS.UI.frame and NS.UI.frame:IsShown() ~= nil then
+    NS.UpdateZoneText()
+  end
+end
+
 -- Single init entry point (called after PLAYER_LOGIN)
 NS.OnReady = NS.OnReady or function()
   local db = NS.EnsureDB()  -- storage.lua handles defaults + migrations
 
   -- Build main UI (namespaced to avoid global leaks)
   local mainFrame = nil
-  if NS.CreateMainFrame      then mainFrame = NS.CreateMainFrame(db) end
+  if NS.CreateMainFrame      then mainFrame = NS.CreateMainFrame() end
   if mainFrame then NS.UI.frame = mainFrame end
-  if NS.CreateMinimapButton  then NS.CreateMinimapButton(db)  end
-  if NS.CreateOptionsPanel   then NS.CreateOptionsPanel(db)   end
-  if NS.UpdateZoneText       then NS.UpdateZoneText()         end
+  if NS.Minimap and NS.Minimap.Boot then NS.Minimap.Boot(db) end
+  -- --- CHANGED: don't call UpdateZoneText here; let events handle it after world is ready
 
   -- Restore position/size/visibility (UI does its own clamping)
   local UIf = NS.UI and NS.UI.frame
@@ -47,6 +63,13 @@ NS.OnReady = NS.OnReady or function()
 
   if NS.RefreshUI           then NS.RefreshUI()           end
   if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
+
+  -- --- NEW: do a micro-defer to update zone text once UI is definitely alive
+  if C_Timer and C_Timer.After then
+    C_Timer.After(0, SafeUpdateZoneText)
+  else
+    SafeUpdateZoneText()
+  end
 end
 
 -- ===== Early events (addon load / login) =====
@@ -84,6 +107,7 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     end
     if NS.RefreshUI           then NS.RefreshUI()           end
     if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
+    SafeUpdateZoneText()
 
   -- Add daily
   elseif msg:sub(1, 4) == "add " then
@@ -144,6 +168,7 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     NS.Print(T("CMD_FRAME_RESET"))
     if NS.RefreshUI           then NS.RefreshUI()           end
     if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
+    SafeUpdateZoneText()
 
   -- Fallback to help string
   else
@@ -165,7 +190,7 @@ ev:SetScript("OnEvent", function(_, event)
       or event == "ZONE_CHANGED"
       or event == "ZONE_CHANGED_INDOORS"
       or event == "ZONE_CHANGED_NEW_AREA") then
-    if NS.UpdateZoneText then NS.UpdateZoneText() end
+    SafeUpdateZoneText()
   elseif event == "PLAYER_LOGOUT" then
     if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
   end

@@ -7,21 +7,29 @@ local L = NS.L
 
 -- ===== UI: general =====
 L.FILTER_LABEL          = "Filter:"
-L.TITLE                 = "Checklist"
+L.TITLE                 = "Winter Checklist"
 L.ZONE_PREFIX           = "Zone: %s"
 L.ZONE_UNKNOWN          = "—"
 
 -- ===== Buttons / controls =====
-L.BTN_ADD               = "+"
+L.BTN_ADD               = "Add"
 L.BTN_CLOSE             = "Close"
 L.BTN_COPY_FROM         = "Copy From Selected"
 L.BTN_DELETE            = "-"
 L.BTN_EDIT              = "E"
 L.BTN_GEAR_TIP          = "Tools / Import/Export"
 L.BTN_HELP              = "?"
+L.BTN_IMPORT            = "Import"
+L.BTN_EXPORT            = "Export"
 L.BTN_REFRESH           = "Refresh"
-L.BTN_TOGGLE            = "Toggle Checklist"
+L.BTN_TOGGLE            = "Open / Close"
 L.MINIMAP_SHOW          = "Show minimap button"
+
+-- Options panel (new)
+L.LOCK_ANCHOR            = "Lock main window position"
+L.PROFILE_MGMT_TITLE     = "Profiles"
+L.PROFILE_SELECT_PROMPT  = "Select a profile…"
+L.COPY_CONFIRM_FMT       = "Copy tasks to %s from %s?"
 
 -- ===== Dialogs / prompts =====
 L.DLG_ADD_TASK          = "Add Task"
@@ -34,8 +42,11 @@ L.COPY_LINK_TEXT        = "Ctrl+A, Ctrl+C to Copy to your Clipboard."
 -- ===== Messages (UI guidance) =====
 L.MSG_PROFILE_EMPTY     = "Selected profile is empty."
 L.MSG_SELECT_PROFILE    = "Select a profile to copy from."
-L.MSG_SELECT_TO_DELETE  = "Click a task first, then press - to delete."
-L.MSG_SELECT_TO_EDIT    = "Click a task first, then press E to edit."
+L.MSG_SELECT_TO_DELETE  = "Use the trash icon on the row to delete."
+L.MSG_SELECT_TO_EDIT    = "Use the pencil icon on the row to edit."
+
+-- Options feedback (new)
+L.MSG_PROFILE_COPIED     = "Tasks copied from profile."
 
 -- ===== Filters =====
 L.FILTER_ALL            = "All"

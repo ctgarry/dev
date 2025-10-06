@@ -14,16 +14,18 @@ _G.WinterChecklist = NS
 
 -- ========= Constants & light defaults =========
 local C = NS.C or {}
-C.FRAME_W     = C.FRAME_W     or 345
+C.FRAME_W     = C.FRAME_W     or 260
 C.FRAME_H     = C.FRAME_H     or 390
-C.TOP_H       = C.TOP_H       or 90
+C.TOP_H       = C.TOP_H       or 72
 C.BOTTOM_H    = C.BOTTOM_H    or 48
 C.ROW_H       = C.ROW_H       or 22
-C.SCROLL_GAP  = C.SCROLL_GAP  or 6
+C.SCROLL_GAP  = C.SCROLL_GAP  or 2
 C.BTN_GAP     = C.BTN_GAP     or 6
 C.BTN_H       = C.BTN_H       or 22
 C.SEARCH_H    = C.SEARCH_H    or 22
 C.FONT        = C.FONT        or "GameFontNormal"
+C.NEAR_WHITE  = C.NEAR_WHITE  or 0.95   -- active row text
+C.GRAY        = C.GRAY        or 0.55   -- completed row text
 
 NS.C = C
 
@@ -121,6 +123,14 @@ local function BuildTopBar(root)
   bHelp:SetSize(24, 24)
   UI.controls.bHelp = bHelp
 
+  -- Addon title at top-left
+  if not UI.controls.title then
+    local titleFS = top:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    titleFS:SetPoint("TOPLEFT", top, "TOPLEFT", 0, 0)
+    titleFS:SetText(addonName or "WinterChecklist")
+    UI.controls.title = titleFS
+  end
+
   bHelp:SetScript("OnClick", function()
     if NS.ClosePopouts then NS.ClosePopouts("help") end  -- mutual exclusivity
     if NS.ToggleHelp   then NS.ToggleHelp(UI.root) end
@@ -157,6 +167,7 @@ local function BuildTopBar(root)
   clearBtn:SetScript("OnClick", function()
     local d = EnsureDB()
     d.search = ""
+    d.freq = "all"
     if UI.controls and UI.controls.searchTop then UI.controls.searchTop:SetText("") end
     if UI.controls and UI.controls.rbAll then
       UI.controls.rbAll:SetChecked(true)
@@ -170,7 +181,7 @@ local function BuildTopBar(root)
   -- Radios under search
   local radios = CreateFrame("Frame", nil, top)
   radios:SetSize(260, 22)
-  radios:SetPoint("TOPLEFT", e, "BOTTOMLEFT", 0, -4)
+  radios:SetPoint("TOPLEFT", e, "BOTTOMLEFT", 0, -2)
   UI.controls.radios = radios
 
   local function MakeRadio(text, key, prev)
@@ -226,7 +237,7 @@ local function BuildTaskList(root)
   local list = CreateFrame("Frame", nil, root, "BackdropTemplate")
   list:SetPoint("TOPLEFT", UI.top, "BOTTOMLEFT", 0, -C.SCROLL_GAP)
   -- bottom bar is two rows tall (actions + nav), subtract both
-  list:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -8, (C.BOTTOM_H * 2) + 8)
+  list:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -8, (C.BOTTOM_H * 2) + 2)
 
   UI.list = list
 
@@ -253,7 +264,7 @@ local function BuildBottomBar(root)
   local bottom = CreateFrame("Frame", nil, root, "BackdropTemplate")
   bottom:SetPoint("BOTTOMLEFT",  root, "BOTTOMLEFT", 8, 8)
   bottom:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -8, 8)
-  bottom:SetHeight(C.BOTTOM_H * 2 + 6)
+  bottom:SetHeight(C.BOTTOM_H * 2)
   UI.bottom = bottom
 
   -- Row 1: Add / Import / Export (left→right)
@@ -279,6 +290,13 @@ local function BuildBottomBar(root)
   bExport:SetPoint("LEFT", bImport, "RIGHT", C.BTN_GAP, 0)
   bExport:SetText(T("BTN_EXPORT"))
   UI.controls.bExport = bExport
+
+  -- Reset (clear all checkmarks)
+  local bReset = CreateFrame("Button", nil, actions, "UIPanelButtonTemplate")
+  bReset:SetSize(70, C.BTN_H)
+  bReset:SetPoint("LEFT", bExport, "RIGHT", C.BTN_GAP, 0)
+  bReset:SetText(T("BTN_RESET") or "Reset")
+  UI.controls.bReset = bReset
 
   -- Row 2: Zone (left, fixed width, shows current zone & opens map) / Refresh (right)
   local nav = CreateFrame("Frame", nil, bottom)
@@ -336,13 +354,15 @@ local function BuildBottomBar(root)
   bAdd:SetScript("OnClick", function()
     if NS.ClosePopouts then NS.ClosePopouts("prompt") end
 
-    local title = T("DLG_ADD_TASK") .. "\n(d: daily, w: weekly; leaving off the prefix = daily)"
+    local title = T("DLG_ADD_TASK") .. "\n(d: daily, w: weekly;\nleaving off the prefix = daily)"
     SimplePrompt(root, title, "d: ", function(text)
       if not text then return end
       local raw = text:gsub("^%s+", ""):gsub("%s+$","")
       if raw == "" then return end
 
       -- Accept "d: Task" -> daily, "w: Task" -> weekly, or plain text -> daily.
+      -- Prevent duplicates within frequency
+
       local prefix, body = raw:match("^(%a)%s*:%s*(.+)$")
       local freq = DefaultFreq()
       if prefix then
@@ -361,11 +381,17 @@ local function BuildBottomBar(root)
       end
 
       local d = EnsureDB()
-      table.insert(d.tasks, { text = body, frequency = freq, completed = false })
+      for _, t in ipairs(d.tasks) do
+        if (t.frequency or "daily") == freq and (t.text or "") == body then
+          if NS.Print then NS.Print("Task already exists in "..freq..": "..body) end
+          return
+        end
+      end
+      table.insert(d.tasks, 1, { text = body, frequency = freq, completed = false })
 
       -- Reset filter/search so new item is visible
-      d.freq = "all"
       d.search = ""
+      d.freq = "all"
       if UI.controls and UI.controls.searchTop then UI.controls.searchTop:SetText("") end
       if UI.controls and UI.controls.rbAll then
         UI.controls.rbAll:Click()
@@ -386,6 +412,10 @@ local function BuildBottomBar(root)
     if NS.ClosePopouts then NS.ClosePopouts("export") end
     if NS.ShowExport then NS.ShowExport(UI.root) end
   end)
+
+  bReset:SetScript("OnClick", function()
+    if NS.ResetTasks then NS.ResetTasks("all") end
+  end)
 end
 
 -- ========= Row factory =========
@@ -404,13 +434,21 @@ local function MakeRow(parent, i, task, root)
   fs:SetJustifyH("LEFT")
   fs:SetText(task.text or "")
 
+  r.fs = fs; r.task = task
+  function r:UpdateTextColor()
+    local c = self.task.completed and NS.C.GRAY or NS.C.NEAR_WHITE
+    self.fs:SetTextColor(c, c, c)
+  end
+
+  r:UpdateTextColor()
+
   -- Tiny edit (✎) and delete (🗑) on right
-  local editBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+  local editBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate"); editBtn:SetFrameLevel(r:GetFrameLevel()+2)
   editBtn:SetSize(20, C.BTN_H - 8)
   editBtn:SetPoint("RIGHT", r, "RIGHT", -28, 0)
   editBtn:SetText("✎")
 
-  local delBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+  local delBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate"); delBtn:SetFrameLevel(r:GetFrameLevel()+2)
   delBtn:SetSize(20, C.BTN_H - 8)
   delBtn:SetPoint("RIGHT", r, "RIGHT", -4, 0)
   delBtn:SetText("🗑")
@@ -420,10 +458,17 @@ local function MakeRow(parent, i, task, root)
 
   -- Handlers
   cb:SetScript("OnClick", function(selfBtn)
-    local d = EnsureDB()
-    task.completed = selfBtn:GetChecked() and true or false
-    if NS.OnTaskToggled then NS.OnTaskToggled(task) end
+    -- use the arg rather than closing over `cb`
+    local checked = selfBtn:GetChecked() and true or false
+
+    r.task.completed = checked
+    r:UpdateTextColor()
+
+    if NS.OnTaskToggled then NS.OnTaskToggled(r.task) end
+    if NS.SaveTasks then NS.SaveTasks() end
+    if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
   end)
+
 
   editBtn:SetScript("OnClick", function()
     SimplePrompt(root, T("DLG_EDIT_TASK"), task.text or "", function(newText)
@@ -540,17 +585,17 @@ function NS.CreateMainFrame(parent)
   end
 
   if f.SetResizeBounds then
-      f:SetResizeBounds(320, 320, 10000, 10000)
+    f:SetResizeBounds(260, 320, 900, 900)
   elseif f.SetMinResize then
-      f:SetMinResize(320, 320)
+    f:SetMinResize(260, 320)
   else
       -- last-ditch clamp
       f._wcMinW, f._wcMinH = 320, 320
       if not f._wcMinSizeHooked then
           f._wcMinSizeHooked = true
           f:HookScript("OnSizeChanged", function(fr, w, h)
-              if w < 320 or h < 320 then
-                  fr:SetSize((w < 320) and 320 or w, (h < 320) and 320 or h)
+              if w < 260 or h < 320 then
+                  fr:SetSize((w < 260) and 260 or w, (h < 320) and 320 or h)
               end
           end)
       end

@@ -37,6 +37,14 @@ function NS.EditSelected(newText)
   local tasks = NS.GetTasks()
   local t = tasks and tasks[selIndex]
   if t then
+    -- Prevent duplicates within same frequency on edit
+    local freq = (t.frequency or FREQ.DAILY)
+    for idx, other in ipairs(tasks) do
+      if idx ~= selIndex and (other.frequency or FREQ.DAILY) == freq and (other.text or "") == (newText or "") then
+        if NS.Print then NS.Print("Duplicate task exists in "..freq..": "..(newText or "")) end
+        return
+      end
+    end
     -- Do not trim or enforce non-empty here; UI should validate and localize messages.
     t.text = newText
     NS.SaveTasks(tasks)

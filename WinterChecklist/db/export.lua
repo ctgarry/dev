@@ -34,6 +34,7 @@ local function showDialog(parent)
   local frame = CreateFrame("Frame", "WC_Export", parent or UIParent, "BackdropTemplate")
   frame:SetSize(C.WIDTH, C.HEIGHT)
   frame:SetPoint("CENTER")
+  frame:SetFrameStrata("DIALOG")
   frame:SetBackdrop({
     bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
     edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
@@ -64,6 +65,7 @@ local function showDialog(parent)
   scroll:SetScrollChild(eb)
   NS._expBox = eb
   NS._exp = frame
+  if frame.GetName then table.insert(UISpecialFrames, frame:GetName()) end
 
   -- Close button
   local close = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")

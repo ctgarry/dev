@@ -37,6 +37,7 @@ local function showDialog(parent)
   local frame = CreateFrame("Frame", "WC_Import", parent or UIParent, "BackdropTemplate")
   frame:SetSize(C.WIDTH, C.HEIGHT)
   frame:SetPoint("CENTER")
+  frame:SetFrameStrata("DIALOG")
   frame:SetBackdrop({
     bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
     edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
@@ -58,6 +59,8 @@ local function showDialog(parent)
   eb:SetPoint("TOPLEFT", C.PAD, C.EDIT_OFFSET_Y)
   eb:SetAutoFocus(false)
   eb:SetScript("OnEscapePressed", function() frame:Hide() end)
+
+  if frame.GetName then table.insert(UISpecialFrames, frame:GetName()) end
 
   -- Import (OK) button
   local ok = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")

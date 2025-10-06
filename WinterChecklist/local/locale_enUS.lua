@@ -112,3 +112,5 @@ L.IMPORT_INSTRUCTIONS   = "Import format:\n- Lines starting with 'd: ' = daily t
 -- ===== Default sample tasks (shown on first run) =====
 L.SAMPLE_DAILY_TASK     = "Sample daily: Turn in daily quest"
 L.SAMPLE_WEEKLY_TASK    = "Sample weekly: Kill world boss"
+
+L.BTN_RESET             = "Reset"

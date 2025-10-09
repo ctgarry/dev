@@ -1,6 +1,10 @@
--- File: ui_extras.lua
--- Purpose: Shared popups and small helpers (no minimap or options UI here).
--- Scope: Independent helpers used by options/minor flows.
+-- File: ui_core.lua
+-- Purpose: Main addon UI (task list, filter, buttons, etc).
+-- Scope: Core UI logic and layout; no popouts or extras here.
+-- Dependencies: ui_extras.lua
+-- Notes: Heavy use of WoW's XML templates for buttons, scrollframes, etc.
+--        Minimap button and options panel are in separate files.
+--        This file is large; see section headers to navigate.    
 
 local ADDON, NS = ...
 
@@ -93,17 +97,25 @@ C.HELP_H        = C.HELP_H        or 320
 C.HELP_OFFSET_X = C.HELP_OFFSET_X or 12
 C.HELP_OFFSET_Y = C.HELP_OFFSET_Y or 0
 
-function NS.ToggleHelp(anchor)
+function NS.ShowHelp(anchor)
+  -- Close other popouts, but keep "help" open
+  if NS.ClosePopouts then NS.ClosePopouts("help") end
+
+  -- Build once
   NS.__help = NS.__help or CreateFrame("Frame", "WC_HelpPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
   local f = NS.__help
   if not f._built then
-    f:SetSize(C.HELP_W, C.HELP_H)
+    f:SetSize(C.HELP_W or 420, C.HELP_H or 320)
     if f.SetBackdrop then
-      f:SetBackdrop({ bgFile="Interface/Tooltips/UI-Tooltip-Background",
-                      edgeFile="Interface/Tooltips/UI-Tooltip-Border", edgeSize=12,
-                      insets={left=4,right=4,top=4,bottom=4}})
+      f:SetBackdrop({
+        bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        edgeSize = 12,
+        insets   = { left=4, right=4, top=4, bottom=4 }
+      })
       f:SetBackdropColor(0,0,0,0.85)
     end
+
     f:EnableMouse(true); f:SetMovable(true)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
@@ -112,24 +124,34 @@ function NS.ToggleHelp(anchor)
     local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 10, -10)
     scroll:SetPoint("BOTTOMRIGHT", -28, 10)
-    local body = CreateFrame("Frame", nil, scroll); scroll:SetScrollChild(body)
-    body:SetSize(C.HELP_W-38, C.HELP_H-28)
+
+    local body = CreateFrame("Frame", nil, scroll)
+    scroll:SetScrollChild(body)
+    body:SetSize((C.HELP_W or 420) - 38, (C.HELP_H or 320) - 28)
 
     local txt = body:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    txt:SetPoint("TOPLEFT"); txt:SetWidth(C.HELP_W-38); txt:SetJustifyH("LEFT")
+    txt:SetPoint("TOPLEFT")
+    txt:SetWidth((C.HELP_W or 420) - 38)
+    txt:SetJustifyH("LEFT")
     f._text = txt
 
-    table.insert(UISpecialFrames, "WC_HelpPopup") -- ESC to close
+    table.insert(UISpecialFrames, "WC_HelpPopup") -- ESC closes
     f._built = true
   end
 
-  local content = (NS.L and NS.L.HELP_BODY) or "Help text not localized yet."
-  f._text:SetText(content)
-
+  -- Position beside main frame (or UIParent fallback)
   local parent = anchor or _G.WC_Main or UIParent
   f:ClearAllPoints()
-  f:SetPoint("TOPLEFT", parent, "TOPRIGHT", C.POPOUT_OFFSET_X or C.HELP_OFFSET_X, C.POPOUT_OFFSET_Y or C.HELP_OFFSET_Y)
-  f:SetShown(not f:IsShown())
+  f:SetPoint(
+    "TOPLEFT", parent, "TOPRIGHT",
+    (C.POPOUT_OFFSET_X or C.HELP_OFFSET_X or 12),
+    (C.POPOUT_OFFSET_Y or C.HELP_OFFSET_Y or 0)
+  )
+
+  -- Update body and show
+  f._text:SetText((NS.L and NS.L.HELP_BODY) or "Help text not localized yet.")
+  f:Show()
+  if f.Raise then f:Raise() end
 end
 
 -- Popout anchoring defaults (don’t recreate NS.C; just read/assign fields)
@@ -143,50 +165,75 @@ function NS.ShowImport(anchor)
   local f = _G.WC_ImportPopup
   if not f then
     f = CreateFrame("Frame", "WC_ImportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    f:SetFrameStrata("DIALOG")
     f:SetSize(380, 300)
-    f:SetBackdrop({ bgFile="Interface/Tooltips/UI-Tooltip-Background", edgeFile="Interface/Tooltips/UI-Tooltip-Border", edgeSize=12, insets={left=4,right=4,top=4,bottom=4} })
-    f:SetBackdropColor(0,0,0,0.9)
+    if f.SetBackdrop then
+      f:SetBackdrop({
+        bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        edgeSize = 12,
+        insets   = { left=4,right=4,top=4,bottom=4 }
+      })
+      f:SetBackdropColor(0,0,0,0.9)
+    end
 
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     title:SetPoint("TOPLEFT", 12, -10)
     title:SetText((NS.L and NS.L.DLG_IMPORT) or "Import")
 
-    -- multiline edit box inside scroll
-    local box = CreateFrame("ScrollFrame", nil, f, "InputScrollFrameTemplate")
-    box:SetPoint("TOPLEFT", 16, -40)
-    box:SetPoint("BOTTOMRIGHT", -16, 50)
-    box.EditBox:SetAutoFocus(false)
-    box.EditBox:SetMultiLine(true)
-    box:SetClipsChildren(true)
-    f._box = box
+    -- Multiline edit box in a UIPanelScrollFrameTemplate (no ghosting/char counter)
+    local sf  = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT", 16, -40)
+    sf:SetPoint("BOTTOMRIGHT", -16, 50)
 
+    local edit = CreateFrame("EditBox", nil, sf)
+    edit:SetMultiLine(true)
+    edit:SetAutoFocus(false)
+    edit:SetFontObject(GameFontHighlightSmall)
+    edit:SetTextColor(1,1,1,1)
+    edit:SetWidth(sf:GetWidth())         -- initial width; keep in sync below
+    edit:SetText("")                     -- start empty
+    sf:SetScrollChild(edit)
+    f._edit = edit
+
+    -- Keep edit width synced to the scrollframe’s visible width
+    sf:HookScript("OnSizeChanged", function(self, w) edit:SetWidth(w or 330) end)
+
+    -- Buttons
     local ok = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    ok:SetSize(80, 22)  ok:SetPoint("BOTTOMRIGHT", -12, 12)  ok:SetText(OKAY)
+    ok:SetSize(80, 22)
+    ok:SetPoint("BOTTOMRIGHT", -12, 12)
+    ok:SetText(OKAY)
     ok:SetScript("OnClick", function()
-      local txt = box.EditBox:GetText() or ""
-      local tasks, err = NS.ParseImport(txt)
+      local txt = (f._edit and f._edit:GetText()) or ""
+      local tasks, err = NS.ParseImport and NS.ParseImport(txt)
       if not tasks then
-        NS.Print((NS.L and NS.L.IMPORT_ABORT_BADLINE and NS.L.IMPORT_ABORT_BADLINE:format(err or "bad line")) or ("Import aborted: "..tostring(err)))
+        if NS.Print then
+          NS.Print(((NS.L and NS.L.IMPORT_ABORT_BADLINE) and NS.L.IMPORT_ABORT_BADLINE:format(err or "bad line"))
+                    or ("Import aborted: "..tostring(err)))
+        end
         return
       end
       local d = (NS.EnsureDB and NS.EnsureDB()) or WinterChecklistDB
       d.tasks = d.tasks or {}
-      for _,t in ipairs(tasks) do table.insert(d.tasks, t) end
+      for _, t in ipairs(tasks) do table.insert(d.tasks, t) end
       if NS.FilterAndRebuildList and _G.WC_Main then NS.FilterAndRebuildList(_G.WC_Main) end
       f:Hide()
     end)
 
     local cancel = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    cancel:SetSize(80, 22)  cancel:SetPoint("RIGHT", ok, "LEFT", -8, 0)  cancel:SetText(CANCEL)
+    cancel:SetSize(80, 22)
+    cancel:SetPoint("RIGHT", ok, "LEFT", -8, 0)
+    cancel:SetText(CANCEL)
     cancel:SetScript("OnClick", function() f:Hide() end)
 
     table.insert(UISpecialFrames, "WC_ImportPopup") -- ESC closes
   end
 
   f:ClearAllPoints()
-  f:SetPoint("TOPLEFT", parent, "TOPRIGHT", C.POPOUT_OFFSET_X, C.POPOUT_OFFSET_Y)
+  f:SetPoint("TOPLEFT", parent, "TOPRIGHT", C.POPOUT_OFFSET_X or 12, C.POPOUT_OFFSET_Y or 0)
   f:Show()
-  f._box.EditBox:SetFocus()
+  if f._edit then f._edit:SetFocus() end
 end
 
 function NS.ShowExport(anchor)
@@ -195,34 +242,53 @@ function NS.ShowExport(anchor)
   local f = _G.WC_ExportPopup
   if not f then
     f = CreateFrame("Frame", "WC_ExportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    f:SetFrameStrata("DIALOG")
     f:SetSize(380, 300)
-    f:SetBackdrop({ bgFile="Interface/Tooltips/UI-Tooltip-Background", edgeFile="Interface/Tooltips/UI-Tooltip-Border", edgeSize=12, insets={left=4,right=4,top=4,bottom=4} })
-    f:SetBackdropColor(0,0,0,0.9)
+    if f.SetBackdrop then
+      f:SetBackdrop({
+        bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        edgeSize = 12,
+        insets   = { left=4,right=4,top=4,bottom=4 }
+      })
+      f:SetBackdropColor(0,0,0,0.9)
+    end
 
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     title:SetPoint("TOPLEFT", 12, -10)
     title:SetText((NS.L and NS.L.DLG_EXPORT) or "Export")
 
+    -- Multiline edit box in a UIPanelScrollFrameTemplate (same pattern as Import)
     local sf  = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
     sf:SetPoint("TOPLEFT", 16, -40)
     sf:SetPoint("BOTTOMRIGHT", -16, 50)
-    local text = CreateFrame("EditBox", nil, sf)
-    text:SetMultiLine(true) text:SetAutoFocus(false) text:SetFontObject(GameFontHighlightSmall)
-    text:SetWidth(330) text:SetHeight(220) text:SetText(NS.BuildExport and NS.BuildExport() or "")
-    sf:SetScrollChild(text)
+
+    local edit = CreateFrame("EditBox", nil, sf)
+    edit:SetMultiLine(true)
+    edit:SetAutoFocus(false)
+    edit:SetFontObject(GameFontHighlightSmall)
+    edit:SetTextColor(1,1,1,1)
+    edit:SetWidth(sf:GetWidth())
+    edit:SetText(NS.BuildExport and NS.BuildExport() or "")
+    sf:SetScrollChild(edit)
+    f._edit = edit
+
+    sf:HookScript("OnSizeChanged", function(self, w) edit:SetWidth(w or 330) end)
 
     local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    close:SetSize(80,22)  close:SetPoint("BOTTOMRIGHT", -12, 12)  close:SetText(CLOSE)
+    close:SetSize(80,22)
+    close:SetPoint("BOTTOMRIGHT", -12, 12)
+    close:SetText(CLOSE)
     close:SetScript("OnClick", function() f:Hide() end)
 
     table.insert(UISpecialFrames, "WC_ExportPopup")
   else
-    -- refresh content
-    local child = f:GetChildren()
-    if child and child.SetText and NS.BuildExport then child:SetText(NS.BuildExport()) end
+    -- refresh content on reopen
+    if f._edit and NS.BuildExport then f._edit:SetText(NS.BuildExport()) end
   end
 
   f:ClearAllPoints()
-  f:SetPoint("TOPLEFT", parent, "TOPRIGHT", C.POPOUT_OFFSET_X, C.POPOUT_OFFSET_Y)
+  f:SetPoint("TOPLEFT", parent, "TOPRIGHT", C.POPOUT_OFFSET_X or 12, C.POPOUT_OFFSET_Y or 0)
   f:Show()
+  if f._edit then f._edit:HighlightText() end
 end

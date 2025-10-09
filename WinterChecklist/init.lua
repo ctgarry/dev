@@ -38,24 +38,29 @@ local function lockCmd(state)
 end
 ADDON.LockCmd = lockCmd
 
--- Slash /wc
-SLASH_WINTERCHECKLIST1 = "/wc"
+SLASH_WINTERCHECKLIST1 = "/wcl"
+
 SlashCmdList["WINTERCHECKLIST"] = function(msg)
-    msg = (msg or ""):lower():match("^%s*(.-)%s*$")
-    if msg == "lock" or msg == "unlock" or msg == "toggle" or msg == "on" or msg == "off" then
-        lockCmd(msg) ; return
-    elseif msg == "minimap" then
-        DB.minimap.hide = not DB.minimap.hide
-        if ADDON.Minimap and ADDON.Minimap.UpdateVisibility then ADDON.Minimap.UpdateVisibility(DB.minimap.hide) end
-        tag("Minimap button "..(DB.minimap.hide and "hidden" or "shown")) ; return
-    elseif msg == "import" then if NS.ShowImport then NS.ShowImport(_G.WC_Main) end
-    elseif msg == "export" then if NS.ShowExport then NS.ShowExport(_G.WC_Main) end
-    elseif msg == "" or msg == "help" then
-      tag("commands: lock | unlock | toggle | minimap | import | export")
-    else
-      if NS.ToggleMain then NS.ToggleMain() end
-    end
+  msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$","")
+  if msg == "lock" then
+    if NS.SetLocked then NS.SetLocked(true) end
+  elseif msg == "unlock" then
+    if NS.SetLocked then NS.SetLocked(false) end
+  elseif msg == "toggle" or msg == "" then
+    if NS.ToggleMain then NS.ToggleMain() end
+  elseif msg == "minimap" then
+    if NS.ToggleMinimap then NS.ToggleMinimap() end
+  elseif msg == "import" then
+    if NS.ShowImport then NS.ShowImport(_G.WC_Main) end
+  elseif msg == "export" then
+    if NS.ShowExport then NS.ShowExport(_G.WC_Main) end
+  elseif msg == "help" then
+    if NS.ShowHelp then NS.ShowHelp(_G.WC_Main) end
+  else
+    if NS.Print then NS.Print("Usage: /wcl [toggle|lock|unlock|minimap|import|export|help]") end
+  end
 end
+
 
 -- Event bootstrap — defer UI creation to after login
 local f = CreateFrame("Frame")

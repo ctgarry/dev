@@ -132,8 +132,7 @@ local function BuildTopBar(root)
   end
 
   bHelp:SetScript("OnClick", function()
-    if NS.ClosePopouts then NS.ClosePopouts("help") end
-    if NS.ToggleHelp then NS.ToggleHelp(UI.root) end   -- ToggleHelp shows next to main; its own logic will show if hidden
+    NS.ShowHelp(_G.WC_Main)
   end)
 
   -- Filter label under the title
@@ -178,18 +177,25 @@ local function BuildTopBar(root)
   end)
   UI.controls.clearFilter = clearBtn
 
-  -- Radios under search
+  -- Radios under search (children of the TOP bar, anchored to the search box)
   local radios = CreateFrame("Frame", nil, top)
-  radios:SetSize(260, 22)
+  radios:SetHeight(22)
   radios:SetPoint("TOPLEFT", e, "BOTTOMLEFT", 0, -2)
+  radios:SetPoint("RIGHT", top, "RIGHT", 0, 0)   -- stretch with top bar
   UI.controls.radios = radios
 
   local function MakeRadio(text, key, prev)
-
-    local rb = CreateFrame("CheckButton", nil, p, "UIRadioButtonTemplate")
+    local rb = CreateFrame("CheckButton", nil, radios, "UIRadioButtonTemplate")
     rb:SetSize(14, 14)
 
-    -- Classic-safe: some templates don’t attach .Text unless the frame is named.
+    -- Chain after the previous radio's label, or start at the left
+    if prev then
+      rb:SetPoint("LEFT", (prev.Text or prev.text), "RIGHT", 16, 0)
+    else
+      rb:SetPoint("LEFT", radios, "LEFT", 0, 0)
+    end
+
+    -- Classic-safe label
     local label = rb.Text or rb.text
     if not label then
       label = rb:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
@@ -197,24 +203,23 @@ local function BuildTopBar(root)
     end
     label:SetText(text)
 
+    -- Expand hit rect to include label
     local w = label:GetStringWidth() or 24
-    rb:SetHitRectInsets(0, -math.max(0, w + 8), 0, 0)
+    rb:SetHitRectInsets(0, -(w + 8), 0, 0)
 
-    if prev then
-      rb:SetPoint("LEFT", prev.Text or prev.text, "RIGHT", 16, 0)  -- chain after label
-    else
-      rb:SetPoint("LEFT", p, "LEFT", 0, 0)
-    end
-
+    -- Checked state from DB
     rb:SetChecked(EnsureDB().freq == key)
+
+    -- Click logic: set filter, update trio, rebuild list
     rb:SetScript("OnClick", function(selfBtn)
       local d = EnsureDB()
       d.freq = key
-      for _, b in ipairs({UI.controls.rbAll, UI.controls.rbDaily, UI.controls.rbWeekly}) do
+      for _, b in ipairs({ UI.controls.rbAll, UI.controls.rbDaily, UI.controls.rbWeekly }) do
         if b then b:SetChecked(b == selfBtn) end
       end
       NS.FilterAndRebuildList(root)
     end)
+
     return rb
   end
 
@@ -222,16 +227,15 @@ local function BuildTopBar(root)
   UI.controls.rbDaily = MakeRadio(T("RAD_DAILY"), "daily",  UI.controls.rbAll)
   UI.controls.rbWeekly= MakeRadio(T("RAD_WEEKLY"),"weekly", UI.controls.rbDaily)
 
-  -- default selection
-  local db = EnsureDB()
-  if db.filterMode == "WEEKLY" then
-    UI.controls.rbWeekly:SetChecked(true)
-  elseif db.filterMode == "DAILY" then
-    UI.controls.rbDaily:SetChecked(true)
-  else
-    UI.controls.rbAll:SetChecked(true)
+  -- Default selection from DB (use d.freq, not legacy filterMode)
+  do
+    local d = EnsureDB()
+    local f = d.freq or "all"
+    UI.controls.rbAll:SetChecked(f == "all")
+    UI.controls.rbDaily:SetChecked(f == "daily")
+    UI.controls.rbWeekly:SetChecked(f == "weekly")
   end
-end
+
 
 -- ========= Build: Task list (scroll + rows) =========
 local function BuildTaskList(root)
@@ -241,6 +245,14 @@ local function BuildTaskList(root)
   list:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -8, (C.BOTTOM_H * 2) + 2)
 
   UI.list = list
+  UI.listChild = CreateFrame("Frame", nil, UI.list)
+  UI.list:SetScrollChild(UI.listChild)
+  UI.listChild:SetPoint("TOPLEFT")
+  UI.listChild:SetPoint("TOPRIGHT")
+  UI.listChild:SetHeight(1)  -- will grow with rows
+  UI.list:SetScript("OnSizeChanged", function(_, w, h)
+    UI.listChild:SetWidth(w) -- keep rows full-width
+  end)
 
   -- Keep row width in sync and rebuild rows when list width changes
   list:SetScript("OnSizeChanged", function(self)
@@ -420,87 +432,89 @@ local function BuildBottomBar(root)
 end
 
 -- ========= Row factory =========
+-- Builds one visible row in the scroll child
 local function MakeRow(parent, i, task, root)
+  -- parent MUST be the scroll child frame (not the scrollframe itself)
   local r  = CreateFrame("Frame", nil, parent)
-  r:SetSize(UI.rowW, C.ROW_H)
+  r:SetHeight(C.ROW_H or (C.BTN_H or 24))      -- row height
+  r:SetPoint("LEFT", parent, "LEFT", 0, 0)
+  r:SetPoint("RIGHT", parent, "RIGHT", 0, 0)   -- stretch to full width of scroll child
 
   -- Checkbox
-  local cb = CreateFrame("CheckButton", nil, r, "UICheckButtonTemplate")
-  cb:SetPoint("LEFT", 4, 0)
-  cb:SetChecked(task.completed or false)
+  local cb = CreateFrame("CheckButton", nil, r, "ChatConfigCheckButtonTemplate") -- Classic-safe template
+  cb:SetPoint("LEFT", r, "LEFT", 4, 0)
+  cb:SetChecked(task.completed and true or false)
 
-  -- Task text
-  local fs = r:CreateFontString(nil, "OVERLAY", C.FONT)
+  -- Right-side tiny Delete then Edit (so text can anchor to Edit's LEFT)
+  local delBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+  delBtn:SetFrameLevel(r:GetFrameLevel()+2)
+  delBtn:SetSize(20, (C.BTN_H or 24) - 8)
+  delBtn:SetPoint("RIGHT", r, "RIGHT", -4, 0)
+  delBtn:SetText(NS.Icon and NS.Icon("trash") or "X")
+
+  local editBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+  editBtn:SetFrameLevel(r:GetFrameLevel()+2)
+  editBtn:SetSize(20, (C.BTN_H or 24) - 8)
+  editBtn:SetPoint("RIGHT", delBtn, "LEFT", -4, 0)
+  editBtn:SetText(NS.Icon and NS.Icon("edit") or "E")
+
+  -- Single-line task text between checkbox and edit button
+  local fs = r:CreateFontString(nil, "OVERLAY", C.FONT or "GameFontHighlight")
   fs:SetPoint("LEFT", cb, "RIGHT", 6, 0)
-  fs:SetPoint("RIGHT", r, "RIGHT", -52, 0)      -- reserve space for tiny buttons
+  fs:SetPoint("RIGHT", editBtn, "LEFT", -6, 0) -- <-- anchor to the buttons (no width math)
   fs:SetJustifyH("LEFT")
-  fs:SetWordWrap(false)                          -- single line only (no wrapping)
+  fs:SetWordWrap(false)
   fs:SetNonSpaceWrap(false)
   fs:SetMaxLines(1)
   fs:SetText(task.text or "")
 
   r.fs = fs; r.task = task
   function r:UpdateTextColor()
-    local c = self.task.completed and NS.C.GRAY or NS.C.NEAR_WHITE
-    self.fs:SetTextColor(c, c, c)
+    local c = (self.task.completed and (NS.C and NS.C.GRAY or 0.6)) or (NS.C and NS.C.NEAR_WHITE or 0.95)
+    fs:SetTextColor(c, c, c)
   end
-
   r:UpdateTextColor()
-
-  -- Tiny edit (✎) and delete (🗑) on right
-  local editBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
-  editBtn:SetFrameLevel(r:GetFrameLevel()+2)
-  editBtn:SetSize(20, C.BTN_H - 8)
-  editBtn:SetPoint("RIGHT", r, "RIGHT", -28, 0)
-  editBtn:SetText(NS.Icon and NS.Icon("edit") or "E") --editBtn:SetText("✎")
-
-  local delBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
-  delBtn:SetFrameLevel(r:GetFrameLevel()+2)
-  delBtn:SetSize(20, C.BTN_H - 8)
-  delBtn:SetPoint("RIGHT", r, "RIGHT", -4, 0)
-  delBtn:SetText(NS.Icon and NS.Icon("trash") or "X") --delBtn:SetText("🗑")
-
-  -- Width for text (leave ~48px for tiny buttons)
-  fs:SetWidth(UI.rowW - 48 - cb:GetWidth() - 10)
 
   -- Handlers
   cb:SetScript("OnClick", function(selfBtn)
-    -- use the arg rather than closing over `cb`
     local checked = selfBtn:GetChecked() and true or false
-
     r.task.completed = checked
     r:UpdateTextColor()
-
     if NS.OnTaskToggled then NS.OnTaskToggled(r.task) end
-    if NS.SaveTasks then NS.SaveTasks(EnsureDB().tasks) end
+    if NS.SaveTasks and NS.EnsureDB then
+      local d = NS.EnsureDB()
+      if d and d.tasks then NS.SaveTasks(d.tasks) end
+    end
     if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
   end)
 
-
   editBtn:SetScript("OnClick", function()
-    SimplePrompt(root, T("DLG_EDIT_TASK"), task.text or "", function(newText)
-      if newText and newText ~= "" then
-        task.text = newText
-        fs:SetText(newText)
-        if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
-      end
-    end)
+    if SimplePrompt then
+      SimplePrompt(root, T("DLG_EDIT_TASK"), task.text or "", function(newText)
+        if newText and newText ~= "" then
+          task.text = newText
+          fs:SetText(newText)
+          if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
+        end
+      end)
+    end
   end)
 
   delBtn:SetScript("OnClick", function()
-    local d = EnsureDB()
-    -- remove the concrete task object from d.tasks
-    for idx, t in ipairs(d.tasks or {}) do
+    if not NS.EnsureDB then return end
+    local d = NS.EnsureDB()
+    if not d or not d.tasks then return end
+    for idx, t in ipairs(d.tasks) do
       if t == task then
         table.remove(d.tasks, idx)
         break
       end
     end
-    NS.FilterAndRebuildList(root)
+    if NS.FilterAndRebuildList then NS.FilterAndRebuildList(root) end
     if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
   end)
 
-  -- Clicking row toggles checkbox (not when clicking buttons)
+  -- Clicking row toggles checkbox (but not when clicking on buttons or the checkbox itself)
   r:SetScript("OnMouseUp", function(_, btn)
     if btn == "LeftButton" then
       local focus = GetMouseFocus()
@@ -516,49 +530,57 @@ end
 
 -- ========= Filtering & rebuild =========
 function NS.FilterAndRebuildList(root, keepScroll)
-  local d = EnsureDB()
+  -- DB + inputs
+  local d = (NS.EnsureDB and NS.EnsureDB()) or {}
   local all = d.tasks or {}
 
-  -- Compute filter
-  local txt = (d.search or ""):lower()
-  local freq = d.freq or "all"
+  local txt  = (d.search or ""):lower()
+  local freq = (d.freq or "all")
 
+  -- Filter
   wipe(UI.filtered)
   for _, t in ipairs(all) do
     local okText = (txt == "") or ((t.text or ""):lower():find(txt, 1, true) ~= nil)
-    local okFreq = (freq == "all") or ((t.frequency or "daily") == freq)
+    local f = (t.frequency or "daily")
+    local okFreq = (freq == "all") or (f == freq)
     if okText and okFreq then
       table.insert(UI.filtered, t)
     end
   end
 
-  -- Rebuild rows
+  -- Parent/scroll child (must exist; created where the list/scrollframe is built)
+  local content = UI.listChild or UI.content
+  if not content then return end
+
+  -- Clear old rows
   for _, row in ipairs(UI.rows) do
     row:Hide()
     row:SetParent(nil)
   end
   wipe(UI.rows)
 
-  local content = UI.content
+  -- Build rows
   local y = -2
   local i = 1
-  UI.rowW = (UI.list:GetWidth() or (C.FRAME_W - 32)) - 4
+  local rowH = (C.ROW_H or (C.BTN_H or 24))
 
   for _, task in ipairs(UI.filtered) do
     local r = MakeRow(content, i, task, root)
     r:ClearAllPoints()
-    r:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
-    r:SetPoint("RIGHT", content, "RIGHT", 0, y)
+    r:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, y)
+    r:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, y)
     r:Show()
     table.insert(UI.rows, r)
-    y = y - C.ROW_H
+    y = y - rowH
     i = i + 1
   end
 
-  content:SetHeight(math.max(10, (#UI.rows * C.ROW_H) + 6))
+  -- Grow scroll child to fit rows so scrolling works
+  content:SetHeight(math.max(10, (#UI.rows * rowH) + 6))
 
-  if not keepScroll and UI.scroll and UI.scroll.ScrollBar then
-    UI.scroll.ScrollBar:SetValue(0)
+  -- Reset scrollbar to top unless caller asks to keep position
+  if not keepScroll and UI.list and UI.list.ScrollBar and UI.list.ScrollBar.SetValue then
+    UI.list.ScrollBar:SetValue(0)
   end
 end
 
@@ -698,4 +720,3 @@ function NS.ParseImport(text)
   if n == 0 then return nil, "no valid lines" end
   return tasks
 end
-

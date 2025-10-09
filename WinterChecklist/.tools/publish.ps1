@@ -53,6 +53,7 @@ $files = $raw |
     ($_ -notmatch '(?i)(^|[\\/])\.git([\\/]|$)')     -and
     ($_ -notmatch '(?i)(^|[\\/])\.github([\\/]|$)')  -and
     ($_ -notmatch '(?i)(^|[\\/])\.tools([\\/]|$)')   -and
+    ($_ -notmatch '(?i)(^|[\\/])\.notes([\\/]|$)')   -and
     ($_ -notmatch '(?i)(^|[\\/])\.dist([\\/]|$)')
   } |
   ForEach-Object { $_.Split('#')[0].Trim() } |
@@ -82,7 +83,7 @@ Copy-Item -LiteralPath $TocPath -Destination $targetToc -Force
 
 # Stage docs/media files (.md, .xml if docs, any .blp/.png/.tga in doc tree if present)
 $stageExts   = '(?i)\.(?:toc|lua|xml|blp|tga|png|md)$'
-$excludeDirs = '(?i)(^|[\\/])(?:\.git|\.github|\.tools|\.dist)([\\/]|$)'
+$excludeDirs = '(?i)(^|[\\/])(?:\.git|\.github|\.tools|\.notes|\.dist)([\\/]|$)'
 
 $files = Get-ChildItem -Path $RepoRoot -Recurse -File |
   Where-Object { $_.Name -match $stageExts -and $_.FullName -notmatch $excludeDirs }
@@ -118,7 +119,7 @@ try {
     if (-not $AddOnsDir) { throw "-Install requires -AddOnsDir" }
     $dest = Join-Path -Path $AddOnsDir -ChildPath $AddonName
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    Copy-Item -Path (Join-Path -Path $stageRoot -ChildPath '*') -Destination $dest -Recurse -Exclude '.git','.github','.tools','.dist' -Force
+    Copy-Item -Path (Join-Path -Path $stageRoot -ChildPath '*') -Destination $dest -Recurse -Exclude '.git','.github','.tools','.notes','.dist' -Force
 
     # Ensure ONLY one TOC exists: <ADDON_NAME>.toc
     Get-ChildItem -LiteralPath $dest -Filter '*.toc' |

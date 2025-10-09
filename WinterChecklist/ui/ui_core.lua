@@ -235,42 +235,38 @@ local function BuildTopBar(root)
     UI.controls.rbDaily:SetChecked(f == "daily")
     UI.controls.rbWeekly:SetChecked(f == "weekly")
   end
-
+end
 
 -- ========= Build: Task list (scroll + rows) =========
 local function BuildTaskList(root)
-  local list = CreateFrame("Frame", nil, root, "BackdropTemplate")
-  list:SetPoint("TOPLEFT", UI.top, "BOTTOMLEFT", 0, -C.SCROLL_GAP)
-  -- bottom bar is two rows tall (actions + nav), subtract both
-  list:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -8, (C.BOTTOM_H * 2) + 2)
+  -- Use a ScrollFrame (not Frame) and give it a name so the template can create children
+  local scroll = CreateFrame("ScrollFrame", (NS and NS.name or "WinterChecklist").."TaskScroll", root, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", root, "TOPLEFT", 12, -96)
+  scroll:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -28, 54)  -- leave space for bottom bar
 
-  UI.list = list
-  UI.listChild = CreateFrame("Frame", nil, UI.list)
-  UI.list:SetScrollChild(UI.listChild)
-  UI.listChild:SetPoint("TOPLEFT")
-  UI.listChild:SetPoint("TOPRIGHT")
-  UI.listChild:SetHeight(1)  -- will grow with rows
-  UI.list:SetScript("OnSizeChanged", function(_, w, h)
-    UI.listChild:SetWidth(w) -- keep rows full-width
+  -- Content frame that actually holds your rows
+  local content = CreateFrame("Frame", nil, scroll)
+  content:SetPoint("TOPLEFT")
+  content:SetSize(1, 1) -- will grow as rows are added
+
+  -- This is the call that failed before; now it's valid because `scroll` is a ScrollFrame
+  scroll:SetScrollChild(content)
+
+  -- Optional: keep a handle for later
+  root._TaskScroll = scroll
+  root._TaskContent = content
+
+  -- (Re)layout rows when the scroll width changes
+  scroll:HookScript("OnSizeChanged", function(self, w, h)
+    if root._TaskContent and w then
+      -- if you use fixed-width rows, update them here; e.g.:
+      -- for _, row in ipairs(root._Rows or {}) do row:SetWidth(w - 16) end
+    end
   end)
 
-  -- Keep row width in sync and rebuild rows when list width changes
-  list:SetScript("OnSizeChanged", function(self)
-    UI.rowW = (self:GetWidth() or (C.FRAME_W - 32)) - 4
-    NS.FilterAndRebuildList(UI.root, true) -- keep scroll
-  end)
-
-  local sf = CreateFrame("ScrollFrame", nil, list, "UIPanelScrollFrameTemplate")
-  sf:SetPoint("TOPLEFT", list, "TOPLEFT", 0, 0)
-  sf:SetPoint("BOTTOMRIGHT", list, "BOTTOMRIGHT", -24, 0)
-
-  local content = CreateFrame("Frame", nil, sf)
-  content:SetSize(10, 10)
-  sf:SetScrollChild(content)
-
-  UI.scroll = sf
-  UI.content = content
+  return scroll, content
 end
+
 
 -- ========= Build: Bottom bar (Zone, Refresh, Add/Import/Export) =========
 local function BuildBottomBar(root)
@@ -689,19 +685,52 @@ end
 
 -- WC_IMPORT_MULTILINE_INLINE
 function NS.BuildImportBox(parent)
-  local box = CreateFrame("ScrollFrame", nil, parent, "InputScrollFrameTemplate")
-  box:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, -40)
-  box:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -16, 50)
-  box.EditBox:SetAutoFocus(false)
-  box.EditBox:SetMultiLine(true)
-  box.EditBox:SetWidth(box:GetWidth())
-  box:SetClipsChildren(true)
-  box.EditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  -- Try Retail template first (some Classic clients don’t have it)
+  local ok, box = pcall(CreateFrame, "ScrollFrame", nil, parent, "InputScrollFrameTemplate")
+
+  if not ok or not box or not box.EditBox then
+    -- Fallback: build a scrolling multi-line input manually
+    local sf = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, -40)
+    sf:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -16, 50)
+    sf:SetClipsChildren(true)
+
+    local edit = CreateFrame("EditBox", nil, sf)
+    edit:SetMultiLine(true)
+    edit:SetAutoFocus(false)
+    edit:EnableMouse(true)
+    edit:SetFontObject(ChatFontNormal or GameFontHighlightSmall or GameFontHighlight)
+    edit:SetWidth(sf:GetWidth())
+    edit:SetText("")
+    edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+    sf:SetScrollChild(edit)
+
+    -- Provide a compatible shape that matches the original API
+    box = sf
+    box.EditBox = edit
+
+    parent:HookScript("OnSizeChanged", function()
+      if parent._ImportBox then parent._ImportBox.EditBox:SetWidth(parent._ImportBox:GetWidth()) end
+    end)
+  else
+    -- Modern path (has InputScrollFrameTemplate)
+    box:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, -40)
+    box:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -16, 50)
+    box.EditBox:SetAutoFocus(false)
+    box.EditBox:SetMultiLine(true)
+    box.EditBox:SetWidth(box:GetWidth())
+    box:SetClipsChildren(true)
+    box.EditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+    parent:HookScript("OnSizeChanged", function()
+      if parent._ImportBox then parent._ImportBox.EditBox:SetWidth(parent._ImportBox:GetWidth()) end
+    end)
+  end
+
   parent._ImportBox = box
-  parent:HookScript("OnSizeChanged", function()
-    if parent._ImportBox then parent._ImportBox.EditBox:SetWidth(parent._ImportBox:GetWidth()) end
-  end)
 end
+
 
 function NS.ParseImport(text)
   if not text or text == "" then return nil, "empty" end

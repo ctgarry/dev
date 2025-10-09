@@ -12,11 +12,11 @@ lib/util.lua
 db/storage.lua
 core.lua
 tasks.lua
-filters.lua
+ui/filters.lua
 db/import.lua
 db/export.lua
 ui/templates.xml
-ui_core.lua
+ui/ui_core.lua
 ui/minimap.lua
 ui/options.lua
-ui_extras.lua
+ui/ui_extras.lua

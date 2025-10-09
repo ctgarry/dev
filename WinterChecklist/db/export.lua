@@ -49,18 +49,44 @@ local function showDialog(parent)
   note:SetText(T("EXPORT_NOTE"))
 
   -- Scrollable edit area for the export payload
-  local scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", C.PAD, C.EDIT_OFFSET_Y)
-  scroll:SetPoint("BOTTOMRIGHT", -C.PAD - 24, C.CLOSE_H + C.CLOSE_OFFSET_Y + 8)
+  local pad = C and C.PAD or 12
+  local innerW = (C and C.WIDTH or 500) - (pad * 2) - 24
+  local innerH = (C and C.HEIGHT or 400) - (pad * 2) - 24
 
-  local eb = CreateFrame("EditBox", nil, scroll)
+  local scroll = CreateFrame("ScrollFrame", "WCL_ExportScroll", frame, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, -pad)
+  scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -pad, pad)
+
+  -- REQUIRED: a sized scroll child
+  local content = CreateFrame("Frame", "WCL_ExportContent", scroll)
+  content:SetSize(innerW, innerH)
+  scroll:SetScrollChild(content)
+
+  local eb = CreateFrame("EditBox", "WCL_ExportEditBox", content)
   eb:SetMultiLine(true)
   eb:SetAutoFocus(true)
+  eb:SetFontObject(ChatFontNormal)
+  eb:SetAllPoints(content)
   eb:EnableMouse(true)
+  eb:SetTextColor(1,1,1,1)
+  eb:HighlightText(0,0)
+
   eb:SetWidth(C.WIDTH - (2 * C.PAD) - 24)
-  eb:SetFontObject("ChatFontNormal")
   eb:SetScript("OnEscapePressed", function() frame:Hide() end)
   eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+
+  if eb.SetBackdrop then
+    eb:SetBackdrop({
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      edgeSize = 8, insets = {left=3,right=3,top=3,bottom=3},
+    })
+    eb:SetBackdropColor(0.1, 0.1, 0.1, 0.85)
+  end
+
+  -- populate text (safe if function missing)
+  local text = WinterChecklist and WinterChecklist.ExportString and WinterChecklist:ExportString() or ""
+  eb:SetText(text)
 
   scroll:SetScrollChild(eb)
   NS._expBox = eb

@@ -59,6 +59,16 @@ local function showDialog(parent)
   eb:SetPoint("TOPLEFT", C.PAD, C.EDIT_OFFSET_Y)
   eb:SetAutoFocus(false)
   eb:SetScript("OnEscapePressed", function() frame:Hide() end)
+  eb:SetTextColor(1, 1, 1, 1)
+
+  if eb.SetBackdrop then
+    eb:SetBackdrop({
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      edgeSize = 8, insets = {left=3,right=3,top=3,bottom=3},
+    })
+    eb:SetBackdropColor(0.1, 0.1, 0.1, 0.85)
+  end
 
   if frame.GetName then table.insert(UISpecialFrames, frame:GetName()) end
 

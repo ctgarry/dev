@@ -126,7 +126,12 @@ NS.EnsureDB = EnsureDB
 -- Small accessors used by other modules
 -- =====================================================================
 function NS.GetTasks()                 return EnsureDB().tasks end
-function NS.SaveTasks(list)            EnsureDB().tasks = list end
+function NS.SaveTasks(list)
+  if type(list) == "table" then
+    EnsureDB().tasks = list
+  end
+  -- else: no-op; never wipe db.tasks by accident
+end
 
 function NS.GetOpt(k, default)
   local v = EnsureDB().opts[k]

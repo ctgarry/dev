@@ -68,22 +68,36 @@ end
 ----------------------------------------------------------------------
 -- Completion & resets
 ----------------------------------------------------------------------
--- Reset completion flags by kind: "all" | "daily" | "weekly"
-function NS.ResetTasks(kind)
-  local db = NS.EnsureDB()
-  local k = type(kind) == "string" and kind:lower() or "all"
 
-  for _, t in ipairs(db.tasks or {}) do
-    local f = (t.frequency or FREQ.DAILY):lower()
-    if k == "all"
-       or (k == "daily"  and f == FREQ.DAILY)
-       or (k == "weekly" and f == FREQ.WEEKLY) then
+-- Frequency constants (lowercase strings)
+NS.FREQ = NS.FREQ or { all = "all", daily = "daily", weekly = "weekly" }
+local FREQ = NS.FREQ
+
+-- Uncheck tasks by kind ("all" | "daily" | "weekly")
+function NS.ResetTasks(kind)
+  local db = NS.EnsureDB and NS.EnsureDB()
+  if not db or not db.tasks then return end
+
+  local k = (type(kind) == "string" and kind:lower()) or "all"
+
+  for _, t in ipairs(db.tasks) do
+    local f = type(t.frequency) == "string" and t.frequency:lower() or "all"
+    if (k == "all")
+       or (k == "daily"  and f == "daily")
+       or (k == "weekly" and f == "weekly") then
       t.completed = false
     end
   end
 
-  if NS.RefreshUI then NS.RefreshUI() end
-  if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
+  if NS.RefreshUI then
+    NS.RefreshUI()
+  elseif NS.FilterAndRebuildList and _G.WC_Main then
+    NS.FilterAndRebuildList(_G.WC_Main)
+  end
+
+  if NS.SyncProfileSnapshot then
+    NS.SyncProfileSnapshot()
+  end
 end
 
 -- Optional helpers (non-breaking; may be used by UI)
@@ -106,3 +120,46 @@ function NS.SetCompleted(i, value)
   if NS.RefreshUI then NS.RefreshUI() end
   if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
 end
+
+
+-- WC_SANITIZE_AND_PEEK
+
+function NS.SanitizeText(s)
+  if type(s) ~= "string" then return s end
+  s = s:gsub("[\226\128\152\226\128\153\239\191\189\194\146]", "'")
+  s = s:gsub("[\226\128\156\226\128\157]", '"')
+  s = s:gsub("\226\128\147", "-"):gsub("\226\128\148", "-")
+  s = s:gsub("\226\128\166", "...")
+  s = s:gsub("\226\128\139", ""):gsub("\194\160", " ")
+  return s
+end
+
+
+local function _WC_PeekFirst(tasks)
+  if type(tasks) ~= "table" then return "[empty]" end
+
+  -- Try array first, fall back to first pair
+  local t = tasks[1]
+  if t == nil then
+    for _, v in pairs(tasks) do t = v; break end
+  end
+  if t == nil then return "[empty]" end
+
+  -- Sanitize text for format/newlines and cap length
+  local txt = tostring(t.text or "?")
+  txt = txt:gsub("%%", "%%%%"):gsub("%s+", " ")
+  if #txt > 80 then txt = txt:sub(1,77) .. "..." end
+
+  local freq = tostring((type(t.frequency) == "string" and t.frequency or "?"))
+  local done = tostring(t.completed)
+
+  -- Count items (fallback if #tasks == 0 for non-array table)
+  local n = #tasks
+  if n == 0 then
+    n = 0
+    for _ in pairs(tasks) do n = n + 1 end
+  end
+
+  return string.format("[%d items] first='%s' (%s, completed=%s)", n, txt, freq, done)
+end
+

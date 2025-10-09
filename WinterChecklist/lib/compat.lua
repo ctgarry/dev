@@ -49,3 +49,18 @@ function NS.T(key)
   local L = NS.L or {}
   return L[key] or key
 end
+
+function NS.Icon(what)
+  if NS.IsClassic then
+    if what == "edit"  then return "E" end
+    if what == "trash" then return "X" end
+    if what == "check" then return "✓" end -- if still broken, fall back to "v"
+    if what == "cancel" then return "x" end 
+    return "?"
+  else
+    if what == "edit"  then return "✎" end
+    if what == "trash" then return "🗑" end 
+    if what == "cancel" then return "⊘" end 
+    return "?"
+  end
+end

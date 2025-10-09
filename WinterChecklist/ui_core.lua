@@ -17,7 +17,7 @@ local C = NS.C or {}
 C.FRAME_W     = C.FRAME_W     or 260
 C.FRAME_H     = C.FRAME_H     or 390
 C.TOP_H       = C.TOP_H       or 72
-C.BOTTOM_H    = C.BOTTOM_H    or 48
+C.BOTTOM_H    = C.BOTTOM_H    or 44
 C.ROW_H       = C.ROW_H       or 22
 C.SCROLL_GAP  = C.SCROLL_GAP  or 2
 C.BTN_GAP     = C.BTN_GAP     or 6
@@ -123,31 +123,31 @@ local function BuildTopBar(root)
   bHelp:SetSize(24, 24)
   UI.controls.bHelp = bHelp
 
-  -- Addon title at top-left
+  -- Title (top-left)
   if not UI.controls.title then
     local titleFS = top:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    titleFS:SetPoint("TOPLEFT", top, "TOPLEFT", 0, 0)
-    titleFS:SetText(addonName or "WinterChecklist")
+    titleFS:SetPoint("TOPLEFT", top, "TOPLEFT", 0, -2)
+    titleFS:SetText((NS.L and NS.L.TITLE) or "Winter Checklist")
     UI.controls.title = titleFS
   end
 
   bHelp:SetScript("OnClick", function()
-    if NS.ClosePopouts then NS.ClosePopouts("help") end  -- mutual exclusivity
-    if NS.ToggleHelp   then NS.ToggleHelp(UI.root) end
+    if NS.ClosePopouts then NS.ClosePopouts("help") end
+    if NS.ToggleHelp then NS.ToggleHelp(UI.root) end   -- ToggleHelp shows next to main; its own logic will show if hidden
   end)
 
-  -- Filter label
+  -- Filter label under the title
   local lbl = top:CreateFontString(nil, "ARTWORK", C.FONT)
-  lbl:SetPoint("TOPLEFT", top, "TOPLEFT", 0, 0)
+  lbl:SetPoint("TOPLEFT", top, "TOPLEFT", 0, -18)  -- was 0, 0; move down
   lbl:SetText(T("FILTER_LABEL"))
   UI.controls.filterLabelTop = lbl
 
-  -- Search editbox
+  -- Search box immediately under label
   local e = CreateFrame("EditBox", nil, top, "InputBoxTemplate")
   e:SetAutoFocus(false)
   e:SetHeight(C.SEARCH_H)
   e:ClearAllPoints()
-  e:SetPoint("TOPLEFT", top, "TOPLEFT", 0, -18)
+  e:SetPoint("TOPLEFT", top, "TOPLEFT", 0, -36)
   e:SetWidth(math.floor((C.FRAME_W - 8) * 0.5))
   e:SetText(EnsureDB().search or "")
   UI.controls.searchTop = e
@@ -163,7 +163,7 @@ local function BuildTopBar(root)
   local clearBtn = CreateFrame("Button", nil, top, "UIPanelButtonTemplate")
   clearBtn:SetSize(24, 22)
   clearBtn:SetPoint("LEFT", e, "RIGHT", 4, 0)
-  clearBtn:SetText("⊘")
+  clearBtn:SetText(NS.Icon("cancel"))
   clearBtn:SetScript("OnClick", function()
     local d = EnsureDB()
     d.search = ""
@@ -186,24 +186,25 @@ local function BuildTopBar(root)
 
   local function MakeRadio(text, key, prev)
 
-    local rb = CreateFrame("CheckButton", nil, radios, "UIRadioButtonTemplate")
-    if prev then
-      rb:SetPoint("LEFT", prev, "RIGHT", 16, 0)
-    else
-      rb:SetPoint("LEFT", radios, "LEFT", 0, 0)
-    end
+    local rb = CreateFrame("CheckButton", nil, p, "UIRadioButtonTemplate")
+    rb:SetSize(14, 14)
 
     -- Classic-safe: some templates don’t attach .Text unless the frame is named.
     local label = rb.Text or rb.text
     if not label then
       label = rb:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
       label:SetPoint("LEFT", rb, "RIGHT", 4, 0)
-      rb.Text = label -- normalize for callers
     end
     label:SetText(text)
 
-    local w = label:GetStringWidth() or 0
+    local w = label:GetStringWidth() or 24
     rb:SetHitRectInsets(0, -math.max(0, w + 8), 0, 0)
+
+    if prev then
+      rb:SetPoint("LEFT", prev.Text or prev.text, "RIGHT", 16, 0)  -- chain after label
+    else
+      rb:SetPoint("LEFT", p, "LEFT", 0, 0)
+    end
 
     rb:SetChecked(EnsureDB().freq == key)
     rb:SetScript("OnClick", function(selfBtn)
@@ -414,7 +415,7 @@ local function BuildBottomBar(root)
   end)
 
   bReset:SetScript("OnClick", function()
-    if NS.ResetTasks then NS.ResetTasks("all") end
+    StaticPopup_Show("WINTERCHECKLIST_CONFIRM_RESET")
   end)
 end
 
@@ -431,7 +432,11 @@ local function MakeRow(parent, i, task, root)
   -- Task text
   local fs = r:CreateFontString(nil, "OVERLAY", C.FONT)
   fs:SetPoint("LEFT", cb, "RIGHT", 6, 0)
+  fs:SetPoint("RIGHT", r, "RIGHT", -52, 0)      -- reserve space for tiny buttons
   fs:SetJustifyH("LEFT")
+  fs:SetWordWrap(false)                          -- single line only (no wrapping)
+  fs:SetNonSpaceWrap(false)
+  fs:SetMaxLines(1)
   fs:SetText(task.text or "")
 
   r.fs = fs; r.task = task
@@ -443,15 +448,17 @@ local function MakeRow(parent, i, task, root)
   r:UpdateTextColor()
 
   -- Tiny edit (✎) and delete (🗑) on right
-  local editBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate"); editBtn:SetFrameLevel(r:GetFrameLevel()+2)
+  local editBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+  editBtn:SetFrameLevel(r:GetFrameLevel()+2)
   editBtn:SetSize(20, C.BTN_H - 8)
   editBtn:SetPoint("RIGHT", r, "RIGHT", -28, 0)
-  editBtn:SetText("✎")
+  editBtn:SetText(NS.Icon and NS.Icon("edit") or "E") --editBtn:SetText("✎")
 
-  local delBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate"); delBtn:SetFrameLevel(r:GetFrameLevel()+2)
+  local delBtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+  delBtn:SetFrameLevel(r:GetFrameLevel()+2)
   delBtn:SetSize(20, C.BTN_H - 8)
   delBtn:SetPoint("RIGHT", r, "RIGHT", -4, 0)
-  delBtn:SetText("🗑")
+  delBtn:SetText(NS.Icon and NS.Icon("trash") or "X") --delBtn:SetText("🗑")
 
   -- Width for text (leave ~48px for tiny buttons)
   fs:SetWidth(UI.rowW - 48 - cb:GetWidth() - 10)
@@ -465,7 +472,7 @@ local function MakeRow(parent, i, task, root)
     r:UpdateTextColor()
 
     if NS.OnTaskToggled then NS.OnTaskToggled(r.task) end
-    if NS.SaveTasks then NS.SaveTasks() end
+    if NS.SaveTasks then NS.SaveTasks(EnsureDB().tasks) end
     if NS.SyncProfileSnapshot then NS.SyncProfileSnapshot() end
   end)
 
@@ -557,22 +564,24 @@ end
 
 -- ========= Orchestrator =========
 function NS.CreateMainFrame(parent)
-  
-  local p = (parent and type(parent) == "userdata" and parent.GetObjectType and parent) or UIParent
-  local f = CreateFrame("Frame", "WC_Main", p, "BackdropTemplate")
-  f:SetSize(C.FRAME_W, C.FRAME_H)
-  f:SetPoint("CENTER")
+
+  local p = (type(parent) == "userdata" and parent.GetObjectType and parent) or UIParent
+  local tpl = BackdropTemplateMixin and "BackdropTemplate" or nil
+  local f   = CreateFrame("Frame", "WC_Main", p, tpl)
 
   -- WoW-like frame border + translucent interior (≈20% see-through)
   if f.SetBackdrop then
     f:SetBackdrop({
       bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
       edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-      edgeSize = 12, insets = { left=4, right=4, top=4, bottom=4 }
+      edgeSize = 12,
+      insets   = { left=4, right=4, top=4, bottom=4 },
     })
     f:SetBackdropColor(0, 0, 0, 0.80) -- 0.80 alpha = ~20% transparency
   end
 
+  f:SetSize(C.FRAME_W, C.FRAME_H)
+  f:SetPoint("CENTER")
 
   -- Drag & resize
   f:EnableMouse(true)
@@ -621,6 +630,7 @@ function NS.CreateMainFrame(parent)
 
   BuildTopBar(f)
   BuildTaskList(f)
+  UI.rowW = UI.list and (UI.list:GetWidth() or (C.FRAME_W - 32)) or (C.FRAME_W - 32)
   BuildBottomBar(f)
 
   -- Initial build
@@ -635,3 +645,57 @@ end
 NS.RefreshUI = NS.RefreshUI or function()
   if UI.root then NS.FilterAndRebuildList(UI.root, true) end
 end
+
+-- WC_RESET_CONFIRM_INLINE
+if not StaticPopupDialogs["WINTERCHECKLIST_CONFIRM_RESET"] then
+  StaticPopupDialogs["WINTERCHECKLIST_CONFIRM_RESET"] = {
+    text = "Are you sure you want to uncheck all tasks?",
+    button1 = YES,
+    button2 = NO,
+    OnAccept = function()
+      if NS and NS.ResetTasks then
+        -- use current filter if you want: NS.GetActiveFilter() or "all"
+        NS.ResetTasks("all")
+      end
+    end,
+    timeout = 0,
+    hideOnEscape = true,
+    whileDead = true,
+    preferredIndex = 3,
+  }
+end
+
+-- WC_IMPORT_MULTILINE_INLINE
+function NS.BuildImportBox(parent)
+  local box = CreateFrame("ScrollFrame", nil, parent, "InputScrollFrameTemplate")
+  box:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, -40)
+  box:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -16, 50)
+  box.EditBox:SetAutoFocus(false)
+  box.EditBox:SetMultiLine(true)
+  box.EditBox:SetWidth(box:GetWidth())
+  box:SetClipsChildren(true)
+  box.EditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  parent._ImportBox = box
+  parent:HookScript("OnSizeChanged", function()
+    if parent._ImportBox then parent._ImportBox.EditBox:SetWidth(parent._ImportBox:GetWidth()) end
+  end)
+end
+
+function NS.ParseImport(text)
+  if not text or text == "" then return nil, "empty" end
+  local tasks, n = {}, 0
+  for raw in string.gmatch(text, "([^\n]+)") do
+    local line = NS.SanitizeText((raw or ""):gsub("\r",""))
+    line = (line:gsub("^%s+",""):gsub("%s+$",""))
+    if line ~= "" then
+      local freq, body = line:match("^%s*(all|daily|weekly)%s*|%s*(.+)$")
+      if not body then body = line:match("^%s*[%-%*]%s*(.+)$"); freq = body and "all" or nil end
+      if not body then body, freq = line, "all" end
+      n = n + 1
+      tasks[n] = { text = body, frequency = freq, completed = false }
+    end
+  end
+  if n == 0 then return nil, "no valid lines" end
+  return tasks
+end
+

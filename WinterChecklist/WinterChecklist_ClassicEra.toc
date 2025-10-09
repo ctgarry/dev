@@ -7,16 +7,16 @@
 ## SavedVariables: WinterChecklistAccountDB
 
 local/locale_enUS.lua
-core.lua
-ui_core.lua
-ui/templates.xml
-ui/minimap.lua
-ui/options.lua
 lib/compat.lua
 lib/util.lua
 db/storage.lua
+core.lua
+tasks.lua
+filters.lua
 db/import.lua
 db/export.lua
-filters.lua
-tasks.lua
+ui/templates.xml
+ui_core.lua
+ui/minimap.lua
+ui/options.lua
 ui_extras.lua

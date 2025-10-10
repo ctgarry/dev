@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Zip: Retail → CurseForge",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.tools/build.ps1",
+        "-Flavor", "retail",
+        "-Mode", "zip"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Zip: Classic Era → CurseForge",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.tools/build.ps1",
+        "-Flavor", "classic_era",
+        "-Mode", "zip"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install: Classic Era (live AddOns)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.tools/build.ps1",
+        "-Flavor", "classic_era",
+        "-Mode", "install"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install: Retail (live AddOns)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.tools/build.ps1",
+        "-Flavor", "retail",
+        "-Mode", "install"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

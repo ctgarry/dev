@@ -5,4 +5,11 @@
 ## Version: 1.0.0
 ## SavedVariables: WinterChecklistDB
 
+## OptionalDeps: LibDataBroker-1.1, LibDBIcon-1.0
+lib/LibDataBroker-1.1/LibDataBroker-1.1.lua
+lib/LibDBIcon-1.0/LibDBIcon-1.0.lua
+
+lua/utils.lua
 WinterChecklist.lua
+lua/minimap.lua
+lua/slash.lua

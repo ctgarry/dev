@@ -15,7 +15,7 @@ A clean-slate, single-file World of Warcraft addon scaffold that targets **Retai
 
 - Movable/clamped UI frame with saved position
 - Zone-aware label (updates on zone/subzone change)
-- Slash commands: `/wc`, `/wc show`, `/wc hide`, `/wc reset`, `/wc debug`, `/wc export`, `/wc import <table>`
+- Slash commands: `/wcl`, `/wcl show`, `/wcl hide`, `/wcl reset`, `/wcl debug`, `/wcl export`, `/wcl import <table>`
 - Lightweight Lua serializer/deserializer (safe env)
 
 ---

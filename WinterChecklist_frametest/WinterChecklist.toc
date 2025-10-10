@@ -1,0 +1,22 @@
+## Interface: 110100
+## Title: WinterChecklist
+## Notes: Simple daily/weekly checklist with automatic resets.
+## Author: CTGarry
+## Version: 1.2.1
+## SavedVariablesPerCharacter: WinterChecklistDB
+## SavedVariables: WinterChecklistAccountDB
+
+loc/locale_enUS.lua
+lua/compat.lua
+lua/util.lua
+lua/storage.lua
+WinterChecklist.lua
+lua/tasks.lua
+lua/filter.lua
+lua/import.lua
+lua/export.lua
+lua/templates.xml
+lua/core.lua
+lua/minimap.lua
+lua/options.lua
+lua/extras.lua

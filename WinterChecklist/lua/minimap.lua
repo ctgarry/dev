@@ -19,9 +19,8 @@ C.POPOUT_OFFSET_Y  = C.POPOUT_OFFSET_Y or 0
 C.MINIMAP = C.MINIMAP or {}
 local CM = C.MINIMAP
 
-CM.ICON_PATH        = CM.ICON_PATH        or "Interface\\AddOns\\WinterChecklist\\media\\minimap.blp"
+CM.ICON_PATH        = CM.ICON_PATH        or "Interface\\AddOns\\WinterChecklist\\img\\minimap.blp"
 
--- Tuned for CTG's Classic Era UI (80% scale, round minimap)
 CM.RIM_ADJUST       = CM.RIM_ADJUST       or 25
 CM.CENTER_OFFSET_X  = CM.CENTER_OFFSET_X  or 0
 CM.CENTER_OFFSET_Y  = CM.CENTER_OFFSET_Y  or 0

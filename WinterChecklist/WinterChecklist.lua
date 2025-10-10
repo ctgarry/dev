@@ -1,127 +1,171 @@
--- WinterChecklist.lua
--- Main addon file. Initializes SavedVariables, UI, and integrates Utils.
+--[[
+  @file        WinterChecklist.lua
+  @brief       Bootstrap, SavedVariables defaults, main frame, and cross-module glue.
+  @addon       WinterChecklist
+  @author      CTG + ChatGPT
+  @notes       Keep this file skinny. UI specifics live in lua/*.lua modules.
+]]
 
-local ADDON_NAME, NS = ...
-NS = NS or _G[ADDON_NAME] or {}
-_G[ADDON_NAME] = NS
+local ADDON, NS = ...
+NS = NS or {}
+_G[ADDON] = NS
 
--- Utilities (must be loaded before this in .toc)
-local U = NS.Util
+-- Namespaces ------------------------------------------------------------------
+NS.Util  = NS.Util  or {}      -- from lua/utils.lua
+NS.Const = NS.Const or {}      -- constants collected here
+local U, C = NS.Util, NS.Const
 
--- SavedVariables declared in .toc as: ## SavedVariables: WinterChecklistDB
+-- Localization table (enUS sets NS.L; fallback to key if missing)
+NS.L = NS.L or setmetatable({}, { __index = function(t, k) return k end })
+local L = NS.L
+
+-- SavedVariables container (declared in TOC via ## SavedVariables)
 WinterChecklistDB = WinterChecklistDB or {}
 
--- ---------- Defaults & state ----------
-local DEFAULTS = {
-  debug = false,
-  minimap = { hide = false }, -- minimap module will ensure/extend this too
-  frame = { x = 400, y = 300, w = 420, h = 300, shown = true },
-  profile = { active = "Default" },
+-- Constants -------------------------------------------------------------------
+C.FRAME_W_DEFAULT   = 420
+C.FRAME_H_DEFAULT   = 320
+C.HELP_BTN_W        = 24
+C.HELP_BTN_H        = 20
+C.TITLE_MARGIN_X    = 12
+C.TITLE_MARGIN_Y    = -10
+C.BACKDROP = {
+  bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
+  edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+  tile = true, tileSize = 16, edgeSize = 12,
+  insets = { left = 3, right = 3, top = 3, bottom = 3 },
 }
 
-local function apply_defaults()
-  U.copy_missing(WinterChecklistDB, DEFAULTS)
-  -- ensure nested defaults exist
-  U.copy_missing(WinterChecklistDB.minimap, DEFAULTS.minimap)
-  U.copy_missing(WinterChecklistDB.frame,   DEFAULTS.frame)
-  U.copy_missing(WinterChecklistDB.profile, DEFAULTS.profile)
+-- Defaults --------------------------------------------------------------------
+local DEFAULTS = {
+  debug = false,
+  minimap = { hide = False and false or false },  -- explicit boolean
+  frame = {
+    w = C.FRAME_W_DEFAULT, h = C.FRAME_H_DEFAULT,
+    point = "CENTER", relPoint = "CENTER", x = 0, y = 0,
+    shown = true,
+  },
+  ui = { locked = false, showHelp = true },
+  profile = { active = "Default" },
+  chars = {}, -- populated in tasks.lua
+}
+
+-- Utilities -------------------------------------------------------------------
+local function apply_defaults(dst, src)
+  for k,v in pairs(src) do
+    if type(v) == "table" then
+      dst[k] = dst[k] or {}
+      apply_defaults(dst[k], v)
+    elseif dst[k] == nil then
+      dst[k] = v
+    end
+  end
 end
 
--- ---------- Printing helpers ----------
-function NS:Print(msg) U.print(msg) end
-function NS:Debug(fmt, ...) U.debug(fmt, ...) end
+local function restore_position(frame, conf)
+  conf = conf or WinterChecklistDB.frame
+  frame:ClearAllPoints()
+  if conf and conf.point and conf.relPoint then
+    frame:SetPoint(conf.point, UIParent, conf.relPoint, conf.x or 0, conf.y or 0)
+  else
+    frame:SetPoint("CENTER")
+  end
+end
 
--- ---------- Simple UI frame ----------
-local UI = {}
-NS.UI = UI
+local function store_position(frame, conf)
+  conf = conf or WinterChecklistDB.frame
+  local p, _, rp, x, y = frame:GetPoint(1)
+  conf.point, conf.relPoint, conf.x, conf.y = p or "CENTER", rp or "CENTER", x or 0, y or 0
+end
 
-local function ensure_frame()
-  if UI.frame then return UI.frame end
+-- Logging
+function NS:Print(msg)
+  if msg == nil then return end
+  DEFAULT_CHAT_FRAME:AddMessage(("|cff00ccff%s:|r %s"):format(ADDON, tostring(msg)))
+end
+function NS:DPrint(msg) if WinterChecklistDB and WinterChecklistDB.debug then NS:Print(msg) end end
 
-  local f = CreateFrame("Frame", "WinterChecklistFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-  f:SetClampedToScreen(true)
-  f:SetMovable(true)
+-- Main Frame ------------------------------------------------------------------
+local function CreateMainFrame()
+  if NS.frame then return end
+  local f = CreateFrame("Frame", ADDON.."MainFrame", UIParent, "BackdropTemplate")
+  f:SetSize(WinterChecklistDB.frame.w, WinterChecklistDB.frame.h)
+  f:SetBackdrop(C.BACKDROP)
+  restore_position(f)
+
+  -- Dragging (respects the 'locked' option)
   f:EnableMouse(true)
+  f:SetMovable(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  f:SetScript("OnDragStart", function(self)
+    if not WinterChecklistDB.ui.locked then self:StartMoving() end
+  end)
   f:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
-    local x, y = self:GetCenter()
-    WinterChecklistDB.frame.x, WinterChecklistDB.frame.y = x, y
+    store_position(self)
   end)
 
-  local w, h = WinterChecklistDB.frame.w, WinterChecklistDB.frame.h
-  f:SetSize(w, h)
+  -- Title
+  local title = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", C.TITLE_MARGIN_X, C.TITLE_MARGIN_Y)
+  title:SetText(L.ADDON_NAME)
 
-  -- Backdrop
-  if f.SetBackdrop then
-    f:SetBackdrop({
-      bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-      edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-      tile = true, tileSize = 16, edgeSize = 12,
-      insets = { left = 3, right = 3, top = 3, bottom = 3 }
-    })
-    f:SetBackdropColor(0,0,0,0.7)
-  end
+  -- Help button
+  local helpBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  helpBtn:SetSize(C.HELP_BTN_W, C.HELP_BTN_H)
+  helpBtn:SetPoint("TOPRIGHT", -8, -8)
+  helpBtn:SetText("?")
+  helpBtn:SetScript("OnClick", function() if NS.Help then NS.Help:Show(f) end end)
+  f.helpBtn = helpBtn
 
-  local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  title:SetPoint("TOPLEFT", 12, -10)
-  title:SetText("|cff33ff99WinterChecklist|r")
-
-  local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", 2, 1)
-
-  -- Sample content
-  local body = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  body:SetPoint("TOPLEFT", 16, -36)
+  -- Body stub (placeholder for tasks UI later)
+  local body = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+  body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+  body:SetWidth(WinterChecklistDB.frame.w - 24)
   body:SetJustifyH("LEFT")
-  body:SetJustifyV("TOP")
-  body:SetText("Welcome! Stub UI — populate with zone-aware tasks, import/export, profiles, etc.")
+  body:SetText("|cffaaaaaa" .. L.TASKS_HEADER .. " — " .. L.HELP_SUMMARY_BODY .. "|r")
 
-  UI.frame = f
-  return f
+  -- Close
+  local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+  close:SetPoint("TOPRIGHT", 0, 0)
+
+  NS.frame = f
+  if WinterChecklistDB.frame.shown then f:Show() else f:Hide() end
+  NS:RefreshMainUIForOptions()
 end
 
-function NS:ShowUI()
-  local f = ensure_frame()
-  local x, y = WinterChecklistDB.frame.x, WinterChecklistDB.frame.y
-  local w, h = WinterChecklistDB.frame.w, WinterChecklistDB.frame.h
-  f:SetSize(w, h)
-  f:ClearAllPoints()
-  if x and y then
-    f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
-  else
-    f:SetPoint("CENTER")
+-- Apply UI prefs to the already-built main frame
+function NS:RefreshMainUIForOptions()
+  if not NS.frame then return end
+  local locked   = WinterChecklistDB.ui and WinterChecklistDB.ui.locked
+  local showHelp = WinterChecklistDB.ui and WinterChecklistDB.ui.showHelp ~= false
+  NS.frame.helpBtn:SetShown(showHelp)
+  -- visual cue (optional): change alpha when locked
+  NS.frame:SetAlpha(locked and 0.97 or 1.0)
+end
+
+function NS:ShowUI() if NS.frame then NS.frame:Show(); WinterChecklistDB.frame.shown = true end end
+function NS:HideUI() if NS.frame then NS.frame:Hide(); WinterChecklistDB.frame.shown = false end end
+function NS:ToggleUI() if NS.frame and NS.frame:IsShown() then NS:HideUI() else NS:ShowUI() end end
+
+-- Minimap visibility helper used by options/minimap
+function NS:ApplyMinimapVisibility()
+  local ok, Icon = pcall(function() return LibStub("LibDBIcon-1.0") end)
+  if ok and Icon and WinterChecklistDB.minimap then
+    if WinterChecklistDB.minimap.hide then Icon:Hide("WinterChecklist")
+    else Icon:Show("WinterChecklist") end
   end
-  f:Show()
-  WinterChecklistDB.frame.shown = true
 end
 
-function NS:HideUI()
-  if UI.frame then UI.frame:Hide() end
-  WinterChecklistDB.frame.shown = false
-end
-
-function NS:ToggleUI()
-  if UI.frame and UI.frame:IsShown() then self:HideUI() else self:ShowUI() end
-end
-
-function NS:ToggleDebug()
-  WinterChecklistDB.debug = not WinterChecklistDB.debug
-  self:Print("Debug " .. (WinterChecklistDB.debug and "enabled" or "disabled") .. ".")
-end
-
--- ---------- Events ----------
+-- Events ----------------------------------------------------------------------
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("ADDON_LOADED")
 ev:RegisterEvent("PLAYER_LOGIN")
 ev:SetScript("OnEvent", function(_, event, arg1)
-  if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
-    apply_defaults()
-    -- minimap setup now happens in minimap.lua
+  if event == "ADDON_LOADED" and arg1 == ADDON then
+    apply_defaults(WinterChecklistDB, DEFAULTS)
   elseif event == "PLAYER_LOGIN" then
-    if WinterChecklistDB.frame.shown then NS:ShowUI() end
+    CreateMainFrame()
+    NS:ApplyMinimapVisibility()
   end
 end)
-
--- NOTE: Do NOT reassign NS.ToggleUI/ToggleDebug here; they are already methods.

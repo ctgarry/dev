@@ -110,8 +110,21 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
 
 ---
 
-## 9. A propmt
+## 9. Some propmts
   - Assume that I have used your three new files word for word. Move all code from winterchecklist.lua having to do with the minimap button into a new file minimap.lua. Do this revision in the same way as you just did the previous revision -- making sure all four files work well together (utils, slash, minimap and winterchecklist) and note the order I should give in the TOC for them. Provide the new files as downloads only, do not display them.
+
+  - You are a seasoned World of Warcraft LUA developer with thousands of successful addons to your credit and a desire to teach the world your skills. Assume that I have taken all those files from the last result word for word. Now use those to please review all LUA files (not lib/) and check for 
+    • inconsistencies
+    • magic numbers that should be declared at the beginning
+    • localization that should be handled
+    • opportunities to have a tiny bit of code actually as a user preference togglable in the options screen
+    • top-of-file descriptors that should be revised or added
+    • modest comments that should be added for longer sections of code that don't seem to have any
+    • namespace or leaky globals
+    • other good practices that keep lean, durable code. 
+    • good reliance on the 4 lib files we've imported
+    • consideration of any other lib files we should import, based on the product direction we are going
+  - Complete these recommendations by integrating them into the files you just provided in the last result and but before you link them again as downloadable files, think one more time and be sure we're not missing a better approach.
 
 ---
 

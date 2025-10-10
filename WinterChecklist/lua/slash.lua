@@ -1,47 +1,30 @@
--- slash.lua
--- Centralized slash commands for WinterChecklist. Depends on utils.lua + main NS APIs.
+--[[
+  @file    lua/slash.lua
+  @brief   /wcl commands to drive core actions.
+]]
+local ADDON, NS = ...
+local L = NS.L
 
-local ADDON_NAME, NS = ...
-NS = NS or _G[ADDON_NAME] or {}
-_G[ADDON_NAME] = NS
-
-local U = NS.Util
-
-local function show_help()
-  U.print("Slash commands:")
-  U.print("/wcl help        - Show this help")
-  U.print("/wcl toggle      - Toggle the UI")
-  U.print("/wcl debug       - Toggle debug logging")
-  U.print("/wcl minimap     - Toggle the minimap icon")
-  U.print("/wcl profile ... - Profile-related (stub)")
-end
-
-local function handle(msg)
-  msg = U.trim(msg)
+SLASH_WINTERCHECKLIST1 = "/wcl"
+SlashCmdList["WINTERCHECKLIST"] = function(msg)
+  msg = (msg or ""):lower()
   local cmd, rest = msg:match("^(%S+)%s*(.*)$")
-  cmd = (cmd or ""):lower()
-
-  if cmd == "" or cmd == "help" or cmd == "?" then
-    show_help()
-  elseif cmd == "toggle" or cmd == "ui" then
+  if not cmd or cmd == "" or cmd == "toggle" then
     NS:ToggleUI()
   elseif cmd == "debug" then
-    NS:ToggleDebug()
+    WinterChecklistDB.debug = not WinterChecklistDB.debug
+    NS:Print(WinterChecklistDB.debug and L.DEBUG_ENABLED or L.DEBUG_DISABLED)
   elseif cmd == "minimap" then
-    NS:ToggleMinimap()
-  elseif cmd == "profile" then
-    U.print("Profile command not yet implemented. Args: "..(rest or ""))
+    NS:ToggleMinimapIcon()
+  elseif cmd == "options" or cmd == "opt" then
+    if NS.Options and NS.Options.Open then NS.Options:Open() end
+  elseif cmd == "help" or cmd == "?" then
+    if NS.Help then NS.Help:Show(NS.frame) end
   else
-    U.print("Unknown command. Try /wcl help")
+    NS:Print(L.SLASH_HEADER)
+    NS:Print("  " .. L.SLASH_TOGGLE)
+    NS:Print("  " .. L.SLASH_DEBUG)
+    NS:Print("  " .. L.SLASH_MINIMAP)
+    NS:Print("  " .. L.SLASH_OPTIONS)
   end
 end
-
--- Register two aliases
-local function register(alias)
-  local tag = "WINTERCHECKLIST_" .. alias:upper():gsub("[^A-Z0-9]", "_")
-  _G["SLASH_"..tag.."1"] = alias
-  SlashCmdList[tag] = handle
-end
-
-register("/wcl")
-register("/winterchecklist")

@@ -10,7 +10,11 @@ lib/LibDataBroker-1.1/LibDataBroker-1.1.lua
 lib/LibDBIcon-1.0/LibDBIcon-1.0.lua
 
 lua/utils.lua
+local/enUS.lua
 WinterChecklist.lua
 lua/minimap.lua
+lua/tasks.lua
+lua/options.lua
+lua/help.lua
 lua/slash.lua
 

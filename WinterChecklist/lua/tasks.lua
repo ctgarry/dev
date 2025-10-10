@@ -22,10 +22,6 @@ local function ensureTables()
 end
 
 -- Public API ------------------------------------------------------------------
-function NS.Tasks_Add(text)  -- backwards-safe alias if needed later
-  return NS.Tasks:Add(text)
-end
-
 local T = {}
 NS.Tasks = T
 
@@ -34,13 +30,19 @@ function T:Add(text)
   text = U.trim(text)
   if text == "" then return false end
   table.insert(c.tasks, text)
+  -- Feedback (sound) via LSM or SOUNDKIT
+  if NS.Media and NS.Media.PlayTaskAdded then NS.Media:PlayTaskAdded() end
+  -- Chat feedback (localized)
+  if NS.Print and L.TASKS_ADDED then NS:Print(L.TASKS_ADDED:format(text)) end
   return true
 end
 
 function T:RemoveByIndex(idx)
   local _, c = ensureTables()
   if type(idx) == "number" and c.tasks[idx] then
-    table.remove(c.tasks, idx); return true
+    local removed = table.remove(c.tasks, idx)
+    if removed and NS.Print and L.TASKS_REMOVED then NS:Print(L.TASKS_REMOVED:format(removed)) end
+    return true
   end
   return false
 end

@@ -36,16 +36,47 @@ C.BACKDROP = {
   insets = { left = 3, right = 3, top = 3, bottom = 3 },
 }
 
+-- LibSharedMedia --------------------------------------------------------------
+local hasLSM, LSM = pcall(function() return LibStub("LibSharedMedia-3.0") end)
+NS.Media = NS.Media or {}
+local M = NS.Media
+M.hasLSM = hasLSM and type(LSM) == "table"
+M.LSM = M.hasLSM and LSM or nil
+
+function M:GetSoundList()
+  if not self.hasLSM then return {} end
+  local list = self.LSM:List("sound") or {}
+  table.sort(list)
+  return list
+end
+
+function M:FetchSound(name)
+  if not self.hasLSM or not name or name == "" then return nil end
+  return self.LSM:Fetch("sound", name, true) -- allowDefault=true
+end
+
+function M:PlayTaskAdded()
+  local ui = WinterChecklistDB.ui or {}
+  if ui.soundOnAdd == false then return end
+  local file = self:FetchSound(ui.soundName)
+  if file then
+    PlaySoundFile(file, "SFX")
+  else
+    -- Fallback to a Blizzard soundkit
+    if PlaySound then PlaySound(SOUNDKIT and SOUNDKIT.READY_CHECK or 8959) end
+  end
+end
+
 -- Defaults --------------------------------------------------------------------
 local DEFAULTS = {
   debug = false,
-  minimap = { hide = False and false or false },  -- explicit boolean
+  minimap = { hide = false },
   frame = {
     w = C.FRAME_W_DEFAULT, h = C.FRAME_H_DEFAULT,
     point = "CENTER", relPoint = "CENTER", x = 0, y = 0,
     shown = true,
   },
-  ui = { locked = false, showHelp = true },
+  ui = { locked = false, showHelp = true, soundOnAdd = true, soundName = "" },
   profile = { active = "Default" },
   chars = {}, -- populated in tasks.lua
 }
@@ -138,9 +169,8 @@ end
 function NS:RefreshMainUIForOptions()
   if not NS.frame then return end
   local locked   = WinterChecklistDB.ui and WinterChecklistDB.ui.locked
-  local showHelp = WinterChecklistDB.ui and WinterChecklistDB.ui.showHelp ~= false
+  local showHelp = WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false)
   NS.frame.helpBtn:SetShown(showHelp)
-  -- visual cue (optional): change alpha when locked
   NS.frame:SetAlpha(locked and 0.97 or 1.0)
 end
 

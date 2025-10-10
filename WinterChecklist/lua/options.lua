@@ -1,6 +1,6 @@
 --[[
   @file    lua/options.lua
-  @brief   Interface Options panel (Retail + Classic) incl. profile task copy.
+  @brief   Interface Options panel (Retail + Classic) incl. profile task copy and feedback (sound).
 ]]
 local ADDON, NS = ...
 local L, U = NS.L, NS.Util
@@ -66,31 +66,67 @@ local function ensurePanel()
     function(val) WinterChecklistDB.ui.showHelp = val; NS:RefreshMainUIForOptions() end
   )
 
+  -- Feedback section: sound on task add ---------------------------------------
+  local fbTitle = p:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+  fbTitle:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -24)
+  fbTitle:SetText(L.OPT_FEEDBACK_SECTION)
+
+  local cbSound = CheckBox(p, L.OPT_SOUND_ON_ADD, {"TOPLEFT", fbTitle, "BOTTOMLEFT", 0, -8},
+    function() return not (WinterChecklistDB.ui and WinterChecklistDB.ui.soundOnAdd == false) end,
+    function(val) WinterChecklistDB.ui.soundOnAdd = val end
+  )
+
+  local dd = CreateFrame("Frame", ADDON.."SoundDropdown", p, "UIDropDownMenuTemplate")
+  dd:SetPoint("TOPLEFT", cbSound, "BOTTOMLEFT", -16, -8)
+
+  local selectedName = WinterChecklistDB.ui and WinterChecklistDB.ui.soundName or ""
+  UIDropDownMenu_Initialize(dd, function(self, level)
+    local info = UIDropDownMenu_CreateInfo()
+    info.text = L.OPT_SOUND_NONE
+    info.func = function() selectedName = ""; UIDropDownMenu_SetText(dd, L.OPT_SOUND_NONE); WinterChecklistDB.ui.soundName = "" end
+    UIDropDownMenu_AddButton(info)
+
+    if NS.Media and NS.Media.GetSoundList then
+      local sounds = NS.Media:GetSoundList()
+      for _, name in ipairs(sounds) do
+        local info2 = UIDropDownMenu_CreateInfo()
+        info2.text = name
+        info2.func = function()
+          selectedName = name
+          UIDropDownMenu_SetText(dd, name)
+          WinterChecklistDB.ui.soundName = name
+        end
+        UIDropDownMenu_AddButton(info2)
+      end
+    end
+  end)
+  UIDropDownMenu_SetText(dd, (selectedName and selectedName ~= "" and selectedName) or L.OPT_SOUND_NONE)
+
   -- Profiles: copy tasks from another character --------------------------------
   local title = p:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -24)
+  title:SetPoint("TOPLEFT", dd, "BOTTOMLEFT", 16, -24)
   title:SetText(L.OPT_PROFILE_COPY)
 
-  local dd = CreateFrame("Frame", ADDON.."CopyFromDropdown", p, "UIDropDownMenuTemplate")
-  dd:SetPoint("TOPLEFT", title, "BOTTOMLEFT", -16, -8)
+  local dd2 = CreateFrame("Frame", ADDON.."CopyFromDropdown", p, "UIDropDownMenuTemplate")
+  dd2:SetPoint("TOPLEFT", title, "BOTTOMLEFT", -16, -8)
 
   local fromKey
-  UIDropDownMenu_Initialize(dd, function(self, level)
+  UIDropDownMenu_Initialize(dd2, function(self, level)
     local chars = NS.Tasks and NS.Tasks.ListCharacters and NS.Tasks:ListCharacters() or {}
     for _, key in ipairs(chars) do
       local info = UIDropDownMenu_CreateInfo()
       info.text, info.func = key, function()
         fromKey = key
-        UIDropDownMenu_SetText(dd, key)
+        UIDropDownMenu_SetText(dd2, key)
       end
       UIDropDownMenu_AddButton(info)
     end
   end)
-  UIDropDownMenu_SetText(dd, L.OPT_FROM_CHARACTER)
+  UIDropDownMenu_SetText(dd2, L.OPT_FROM_CHARACTER)
 
   local btn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
   btn:SetSize(140, 22)
-  btn:SetPoint("LEFT", dd, "RIGHT", 0, 0)
+  btn:SetPoint("LEFT", dd2, "RIGHT", 0, 0)
   btn:SetText(L.OPT_COPY_BUTTON)
   btn:SetScript("OnClick", function()
     if fromKey and NS.Tasks and NS.Tasks.CopyFromCharacter then

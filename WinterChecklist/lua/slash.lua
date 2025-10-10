@@ -18,7 +18,30 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     NS:ToggleMinimapIcon()
   elseif cmd == "options" or cmd == "opt" then
     if NS.Options and NS.Options.Open then NS.Options:Open() end
-  elseif cmd == "help" or cmd == "?" then
+elseif cmd == "export" then
+  if NS.Tasks and NS.Tasks.Export then
+    local payload = NS.Tasks:Export()
+    if NS.Util and NS.Util.ShowTextPopup then
+      NS.Util.ShowTextPopup(L.EXPORT_TITLE or "WinterChecklist — Export", payload)
+    else
+      NS:Print(L.EXPORT_READY or "Export string ready. Copy from the popup.")
+      print(payload)
+    end
+  end
+elseif cmd == "import" then
+  local data = NS.Util and NS.Util.trim(rest or "") or (rest or "")
+  if (not data or data == "") and NS.Util and NS.Util.ShowTextPopup then
+    NS.Util.ShowTextPopup(L.IMPORT_TITLE or "WinterChecklist — Paste Import", "")
+    NS:Print(L.IMPORT_INSTRUCTIONS or "Paste an export string into the popup and click Accept.")
+  elseif NS.Tasks and NS.Tasks.Import then
+    local ok, count = NS.Tasks:Import(data)
+    if ok then
+      NS:Print((L.IMPORT_OK_FMT or "Imported %d tasks."):format(count or 0))
+    else
+      NS:Print(L.IMPORT_FAILED or "Import failed; invalid data.")
+    end
+  end
+elseif cmd == "help" or cmd == "?" then
     if NS.Help then NS.Help:Show(NS.frame) end
   else
     NS:Print(L.SLASH_HEADER)
@@ -26,5 +49,7 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     NS:Print("  " .. L.SLASH_DEBUG)
     NS:Print("  " .. L.SLASH_MINIMAP)
     NS:Print("  " .. L.SLASH_OPTIONS)
+    NS:Print("  /wcl export - Export your tasks")
+    NS:Print("  /wcl import <paste> - Import tasks (omit <paste> to open a popup)")
   end
 end

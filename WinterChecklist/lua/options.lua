@@ -137,3 +137,28 @@ local function ensurePanel()
 end
 
 C_Timer.After(0, ensurePanel)
+
+
+-- Add discoverability: register category and add "Open Main Window" button
+local function wcl_add_open_button()
+  if not NS.Options or not NS.Options.panel then return end
+  local p = NS.Options.panel
+  if p._wclOpenButton then return end
+
+  -- Create button
+  local btn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+  btn:SetSize(160, 24)
+  btn:SetPoint("TOPRIGHT", -24, -24)
+  btn:SetText((NS.L.OPEN_MAIN or "Open Main Window"))
+  btn:SetScript("OnClick", function() if NS.ToggleUI then NS:ToggleUI() end end)
+  p._wclOpenButton = btn
+
+  -- Register category (Retail)
+  if NS.IsRetail and NS.IsRetail() and Settings and Settings.RegisterAddOnCategory then
+    if not p.categoryID then
+      p.categoryID = Settings.RegisterAddOnCategory(p)
+    end
+  end
+end
+
+C_Timer.After(0.25, wcl_add_open_button)

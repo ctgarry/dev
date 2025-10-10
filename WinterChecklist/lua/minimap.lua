@@ -10,7 +10,7 @@ local L = NS.L
 local hasLDB, LDB = pcall(function() return LibStub("LibDataBroker-1.1") end)
 local hasIcon, Icon = pcall(function() return LibStub("LibDBIcon-1.0") end)
 
-local ICON_PATH = "Interface\\AddOns\\WinterChecklist\\media\\snowflake"
+local ICON_PATH = "Interface\\AddOns\\WinterChecklist\\img\\minimap"
 local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_Snowball_10"
 
 if hasLDB and hasIcon then

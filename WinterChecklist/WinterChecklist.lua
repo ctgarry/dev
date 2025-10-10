@@ -15,6 +15,15 @@ NS.Util  = NS.Util  or {}      -- from lua/utils.lua
 NS.Const = NS.Const or {}      -- constants collected here
 local U, C = NS.Util, NS.Const
 
+-- Flavor helpers
+function NS.IsRetail()
+  local v = (select(4, GetBuildInfo())) or 0
+  return v >= 100000
+end
+function NS.IsClassic()
+  return not NS.IsRetail()
+end
+
 -- Localization table (enUS sets NS.L; fallback to key if missing)
 NS.L = NS.L or setmetatable({}, { __index = function(t, k) return k end })
 local L = NS.L
@@ -199,3 +208,54 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     NS:ApplyMinimapVisibility()
   end
 end)
+
+
+-- Simple notify hook for task changes
+function NS.NotifyTasksChanged(reason)
+  if NS.Debug and type(NS.Debug) == "function" then NS:Debug("Tasks changed: "..(reason or "?")) end
+  -- Future: dispatch to listeners if needed
+end
+
+
+-- DB defaults & migration
+function NS.MigrateDB()
+  WinterChecklistDB = WinterChecklistDB or {}
+  WinterChecklistDB.version = WinterChecklistDB.version or 1
+  WinterChecklistDB.chars = WinterChecklistDB.chars or {}
+end
+
+-- Enhance main frame behaviors (ESC close + clamp on drag stop)
+function NS.EnhanceMainFrame()
+  local f = NS.frame
+  if not f then return end
+  -- ESC to close without needing a global name
+  f:EnableKeyboard(true)
+  f:SetPropagateKeyboardInput(true)
+  f:HookScript("OnKeyDown", function(self, key)
+    if key == "ESCAPE" then self:Hide() end
+  end)
+  -- Clamp to screen
+  if f.SetClampedToScreen then f:SetClampedToScreen(true) end
+  f:HookScript("OnDragStop", function(self)
+    if NS.Util and NS.Util.ClampToScreen then NS.Util.ClampToScreen(self) end
+  end)
+end
+
+-- Enhance minimap clicks
+function NS.EnhanceMinimapButtonClicks()
+  local btn = _G["LibDBIcon10_"..(ADDON or "WinterChecklist")]
+  if not btn then return end
+  btn:RegisterForClicks("AnyUp")
+  btn:SetScript("OnClick", function(_, button)
+    if button == "RightButton" then
+      if NS.Options and NS.Options.Open then NS.Options:Open() end
+    else
+      if IsShiftKeyDown() then
+        WinterChecklistDB.debug = not WinterChecklistDB.debug
+        if NS.Print then NS:Print(WinterChecklistDB.debug and (NS.L.DEBUG_ENABLED or "Debug ON") or (NS.L.DEBUG_DISABLED or "Debug OFF")) end
+      else
+        if NS.ToggleUI then NS:ToggleUI() end
+      end
+    end
+  end)
+end

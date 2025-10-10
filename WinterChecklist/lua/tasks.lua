@@ -67,3 +67,83 @@ function T:CopyFromCharacter(fromKey)
   mine.tasks = U.shallow_copy(from.tasks) or {}
   return true
 end
+
+-- Export / Import --------------------------------------------------------------
+local T = NS.Tasks or {}
+NS.Tasks = T
+
+-- shallow schema: tasks are stored under WinterChecklistDB.chars[me].tasks = { {text=..., done=false}, ... }
+local function ensureTables()
+  WinterChecklistDB = WinterChecklistDB or {}
+  WinterChecklistDB.chars = WinterChecklistDB.chars or {}
+  local me = (UnitName("player") or "Unknown").."-"..(GetRealmName() or "Realm")
+  local mine = WinterChecklistDB.chars[me] or {}
+  WinterChecklistDB.chars[me] = mine
+  mine.tasks = mine.tasks or {}
+  return me, mine
+end
+
+-- serialize to a compact Lua string (safe to paste)
+local function serialize(tbl)
+  local function esc(s) return (s or ""):gsub('\\', '\\\\'):gsub('"', '\\"') end
+  local out = { "return { tasks={" }
+  for _,t in ipairs(tbl or {}) do
+    table.insert(out, ('{text="%s",done=%s},'):format(esc(t.text), tostring(not not t.done)))
+  end
+  table.insert(out, "} }")
+  return table.concat(out, "")
+end
+
+function T:Export()
+  local _, mine = ensureTables()
+  local payload = serialize(mine.tasks)
+  return payload
+end
+
+local function deserialize(chunk)
+  if type(chunk) ~= "string" or chunk == "" then return nil end
+  local ok, res = pcall(loadstring(chunk))
+  if not ok or type(res) ~= "function" then return nil end
+  local ok2, tbl = pcall(res)
+  if not ok2 or type(tbl) ~= "table" then return nil end
+  return tbl
+end
+
+function T:Import(data)
+  local tbl = deserialize(data)
+  if not tbl or type(tbl.tasks) ~= "table" then return false end
+  local _, mine = ensureTables()
+  mine.tasks = {}
+  local count = 0
+  for _,t in ipairs(tbl.tasks) do
+    if type(t) == "table" and type(t.text) == "string" then
+      table.insert(mine.tasks, { text=t.text, done=not not t.done })
+      count = count + 1
+    end
+  end
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("IMPORT") end
+  return true, count
+end
+
+-- Ergonomics: Remove(text) and Clear()
+function T:Remove(text)
+  local _, mine = ensureTables()
+  if not text or text == "" then return 0 end
+  local removed = 0
+  for i=#mine.tasks,1,-1 do
+    if mine.tasks[i].text == text then
+      table.remove(mine.tasks, i)
+      removed = removed + 1
+    end
+  end
+  if removed > 0 and NS.NotifyTasksChanged then NS.NotifyTasksChanged("REMOVE") end
+  return removed
+end
+
+function T:Clear()
+  local _, mine = ensureTables()
+  local n = #mine.tasks
+  wipe(mine.tasks)
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("CLEAR") end
+  return n
+end

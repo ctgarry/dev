@@ -125,6 +125,7 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
     • good reliance on the 4 lib files we've imported
     • consideration of any other lib files we should import, based on the product direction we are going
   - Complete these recommendations by integrating them into the files you just provided in the last result and but before you link them again as downloadable files, think one more time and be sure we're not missing a better approach.
+  - Think about what kind of Checklist features are possible for tasks and activities in a Classic Era Wow addon. Should there be categories? Drilldowns? preset libraries?
 
 ---
 

@@ -36,3 +36,48 @@ function U.clamp(v, lo, hi)
   if v > hi then return hi end
   return v
 end
+
+
+-- UI helpers ------------------------------------------------------------------
+function U.ShowTextPopup(title, text, onAccept)
+  if not StaticPopupDialogs then StaticPopupDialogs = {} end
+  StaticPopupDialogs["WCL_TEXT_POPUP"] = {
+    text = title or "WinterChecklist",
+    button1 = OKAY,
+    button2 = CANCEL,
+    hasEditBox = true,
+    maxLetters = 0,
+    OnShow = function(self)
+      local eb = self.editBox
+      eb:SetText(text or "")
+      eb:SetFocus()
+      eb:HighlightText()
+    end,
+    OnAccept = function(self)
+      if onAccept then onAccept(self.editBox:GetText()) end
+    end,
+    EditBoxOnEnterPressed = function(self) self:GetParent().button1:Click() end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+  }
+  StaticPopup_Show("WCL_TEXT_POPUP")
+end
+
+function U.ClampToScreen(frame)
+  if not frame then return end
+  local uiW, uiH = UIParent:GetRight(), UIParent:GetTop()
+  local left, bottom = frame:GetLeft() or 0, frame:GetBottom() or 0
+  local right, top = frame:GetRight() or 0, frame:GetTop() or 0
+  local offX = 0
+  local offY = 0
+  if left < 0 then offX = -left end
+  if right > uiW then offX = uiW - right end
+  if bottom < 0 then offY = -bottom end
+  if top > uiH then offY = uiH - top end
+  if offX ~= 0 or offY ~= 0 then
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (frame:GetLeft() or 0) + offX, (frame:GetTop() or 0) + offY)
+  end
+end

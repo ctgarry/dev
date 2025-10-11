@@ -125,8 +125,33 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
     • good reliance on the 4 lib files we've imported
     • consideration of any other lib files we should import, based on the product direction we are going
   - Complete these recommendations by integrating them into the files you just provided in the last result and but before you link them again as downloadable files, think one more time and be sure we're not missing a better approach.
-  - Think about what kind of Checklist features are possible for tasks and activities in a Classic Era Wow addon. Should there be categories? Drilldowns? preset libraries?
+  - Think about what kind of Checklist features are possible for tasks and activities in a Classic Era Wow addon. What are we missing that someone else might have that we could actually do better! Should there be categories? Drilldowns? Preset libraries? in-frame task list UI (with add/remove/clear + import/export buttons) ?
 
+ - • As before, you are an experienced LUA developer with billions of successful addons to your credit. 
+  • Please use a fresh view of 009 zip direct from project files, produce milestone A by merging sensibly the proposed code changes with files from the existing zip. 
+  • Before committing to the change, pause and think again about all the changes, ask me at least three clarifying questions that might make the release even better. Make sure that you have not dropped any features; avoid over-coding; support classic_era primarily with extensibility to retail; make sure that this leads sensibly to Milestone B. 
+  • Finally provide the new files in a downloadable link (don't display actual code since we don't want to fill up the browser).
+  • Provide a high level overview. Note any recommended changes to the scope of Milestone B.
+
+  Quick clarifying questions (at least 3)
+
+  List anatomy: do you want flat tasks first (single list) or top-level categories + tasks right away? (I can keep Milestone A flat and visually group later, or seed simple categories now so B is a pure UI step.)
+
+  Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?
+
+  Import/Export default: when a user imports without a category, should it replace the current list (simple) or merge (smarter, avoids accidental wipes)?
+
+  LDB/minimap text: show “X/Y” always, or “X” when any incomplete; blank when all done (quieter)?
+
+  Search/filter bar: include a small inline search box in Milestone A, or keep it to the All/Incomplete toggle only (fewer widgets to start)?
+
+  Sound cues: enable a subtle completion sound by default (LSM), or off by default with a toggle in Options?
+
+  Retail parity: OK to keep code paths Classic-first and defer Retail testing until after Milestone A (retail shims stay in place)?
+
+  Visual density: prefer a compact single-column list (space efficient) or two-column when the window is wide (more at-a-glance)?
+
+  Reorder now vs later: for Milestone A, is Up/Down arrows acceptable (drag in Milestone B), or do you want to skip reordering until B?
 ---
 
 _These fundamentals cover 90% of the Lua behavior you’ll meet when building or debugging WoW addons._

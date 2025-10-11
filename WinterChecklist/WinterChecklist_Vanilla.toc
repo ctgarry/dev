@@ -20,4 +20,4 @@ lua/tasks.lua
 lua/options.lua
 lua/help.lua
 lua/slash.lua
-
+lua/ui_list.lua

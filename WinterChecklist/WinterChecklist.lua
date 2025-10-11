@@ -203,6 +203,7 @@ ev:RegisterEvent("PLAYER_LOGIN")
 ev:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     apply_defaults(WinterChecklistDB, DEFAULTS)
+    WinterChecklistDB.accountWide = WinterChecklistDB.accountWide or true -- default ON per user
   elseif event == "PLAYER_LOGIN" then
     CreateMainFrame()
     NS:ApplyMinimapVisibility()
@@ -258,4 +259,11 @@ function NS.EnhanceMinimapButtonClicks()
       end
     end
   end)
+end
+
+
+-- Milestone A UI: attach list controls
+function NS.BootstrapUIList()
+  if not NS.frame then return end
+  if NS.UIList and NS.UIList.Init then NS.UIList:Init(NS.frame) end
 end

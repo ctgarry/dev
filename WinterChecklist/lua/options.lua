@@ -162,3 +162,22 @@ local function wcl_add_open_button()
 end
 
 C_Timer.After(0.25, wcl_add_open_button)
+
+
+-- Milestone A: Options additions ----------------------------------------------
+local function add_account_toggle()
+  if not NS.Options or not NS.Options.panel then return end
+  local p = NS.Options.panel
+  if p._wclAccountCheck then return end
+  local cb = CreateFrame("CheckButton", nil, p, "InterfaceOptionsCheckButtonTemplate")
+  cb:SetPoint("TOPLEFT", 24, -24)
+  cb.Text:SetText(L.OPT_ACCOUNT_WIDE or "Account-wide tasks")
+  cb:SetChecked(WinterChecklistDB and WinterChecklistDB.accountWide)
+  cb:SetScript("OnClick", function(self)
+    WinterChecklistDB.accountWide = self:GetChecked() and true or false
+    if NS.UIList and NS.UIList.Refresh then NS.UIList:Refresh() end
+  end)
+  p._wclAccountCheck = cb
+end
+
+C_Timer.After(0.3, add_account_toggle)

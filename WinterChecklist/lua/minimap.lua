@@ -8,21 +8,39 @@ local U = NS.Util
 local L = NS.L
 
 local hasLDB, LDB = pcall(function() return LibStub("LibDataBroker-1.1") end)
-local hasIcon, Icon = pcall(function() return LibStub("LibDBIcon-1.0") end)
 
 local ICON_PATH = "Interface\\AddOns\\WinterChecklist\\img\\minimap"
 local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_Snowball_10"
 
+-- Helper to compute done/total for broker text
+local function WCL_Counts()
+  if not NS.Tasks or not NS.Tasks.GetAll then return 0, 0 end
+  local total, done = 0, 0
+  for _, row in ipairs(NS.Tasks:GetAll()) do
+    total = total + 1
+    if row.done then done = done + 1 end
+  end
+  return done, total
+end
+
+local hasLDB, LDB = pcall(function() return LibStub("LibDataBroker-1.1") end)
+local hasIcon, Icon = pcall(function() return LibStub("LibDBIcon-1.0") end)
+
 if hasLDB and hasIcon then
+  local d, tt = WCL_Counts()
   local broker = LDB:NewDataObject(ADDON, {
-    type = "launcher",
-    text = ADDON,
-    icon = ICON_PATH,
+    type  = "launcher",
+    label = ADDON,
+    text  = ("WCL %d/%d"):format(d, tt),
+    icon  = ICON_PATH,
     OnClick = function(_, button)
-      if button == "LeftButton" then
-        NS:ToggleUI()
-      else
+      if button == "RightButton" then
         if NS.Options and NS.Options.Open then NS.Options:Open() end
+      elseif IsShiftKeyDown() then
+        WinterChecklistDB.debug = not WinterChecklistDB.debug
+        if NS.Print then NS:Print(WinterChecklistDB.debug and (L.DEBUG_ENABLED or "Debug ON") or (L.DEBUG_DISABLED or "Debug OFF")) end
+      else
+        if NS.ToggleUI then NS:ToggleUI() end
       end
     end,
     OnTooltipShow = function(tt)
@@ -31,12 +49,21 @@ if hasLDB and hasIcon then
       tt:AddLine(L.SLASH_OPTIONS, 1,1,1)
     end
   })
-  -- Use fallback icon if custom path missing
-  local iconFile = broker.icon
-  if not iconFile or not C_Texture.GetAtlasInfo(iconFile) then
+
+  -- Fallback icon if path is missing/invalid
+  if not broker.icon or broker.icon == "" then
     broker.icon = FALLBACK_ICON
   end
+
   Icon:Register(ADDON, broker, WinterChecklistDB and WinterChecklistDB.minimap or { hide=false })
+end
+
+-- Allow UI to refresh the broker text after task changes
+function NS.EnhanceMinimapText()
+  if not hasLDB then return end
+  local d, tt = WCL_Counts()
+  local obj = LDB and LDB.GetDataObjectByName and LDB:GetDataObjectByName(ADDON)
+  if obj then obj.text = ("WCL %d/%d"):format(d, tt) end
 end
 
 function NS:ToggleMinimapIcon()

@@ -5,6 +5,7 @@
 local ADDON, NS = ...
 local U = NS.Util
 local L = NS.L
+local T = NS.Tasks
 
 -- Internal: character key "Name-Realm"
 local function keyForChar()
@@ -146,4 +147,107 @@ function T:Clear()
   wipe(mine.tasks)
   if NS.NotifyTasksChanged then NS.NotifyTasksChanged("CLEAR") end
   return n
+end
+
+
+-- Milestone A: extended task API ----------------------------------------------
+local function activeKey()
+  local account = WinterChecklistDB and WinterChecklistDB.accountWide
+  if account then return "Account-Wide" end
+  local name, realm = UnitFullName and UnitFullName("player")
+  name = name or UnitName("player") or "Unknown"
+  realm = realm or GetRealmName() or "Realm"
+  return name.."-"..realm
+end
+
+local function ensureTables()
+  WinterChecklistDB = WinterChecklistDB or {}
+  WinterChecklistDB.chars = WinterChecklistDB.chars or {}
+  WinterChecklistDB.accountWide = WinterChecklistDB.accountWide or false
+  local key = activeKey()
+  local rec = WinterChecklistDB.chars[key] or {}
+  WinterChecklistDB.chars[key] = rec
+  rec.tasks = rec.tasks or {}
+  return key, rec
+end
+
+local function normalizeFreq(freq)
+  freq = tostring(freq or "all"):lower()
+  if freq ~= "daily" and freq ~= "weekly" then return "all" end
+  return freq
+end
+
+function T:Add(text, freq)
+  local _, me = ensureTables()
+  local s = U and U.trim and U.trim(text) or text
+  if not s or s == "" then return false end
+  table.insert(me.tasks, { text=s, done=false, freq=normalizeFreq(freq) })
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("ADD") end
+  return true
+end
+
+function T:Edit(index, newText, newFreq)
+  local _, me = ensureTables()
+  local row = me.tasks[index]
+  if not row then return false end
+  if newText and newText ~= "" then row.text = newText end
+  if newFreq then row.freq = normalizeFreq(newFreq) end
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("EDIT") end
+  return true
+end
+
+function T:ToggleDone(index, val)
+  local _, me = ensureTables()
+  local row = me.tasks[index]
+  if not row then return false end
+  row.done = (val == nil) and (not row.done) or not not val
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("TOGGLE") end
+  return true
+end
+
+function T:RemoveByIndex(index)
+  local _, me = ensureTables()
+  if not me.tasks[index] then return false end
+  table.remove(me.tasks, index)
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("REMOVE") end
+  return true
+end
+
+function T:MoveUp(index)
+  local _, me = ensureTables()
+  if index <= 1 or index > #me.tasks then return false end
+  me.tasks[index-1], me.tasks[index] = me.tasks[index], me.tasks[index-1]
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("MOVE") end
+  return true
+end
+
+function T:MoveDown(index)
+  local _, me = ensureTables()
+  if index < 1 or index >= #me.tasks then return false end
+  me.tasks[index+1], me.tasks[index] = me.tasks[index], me.tasks[index+1]
+  if NS.NotifyTasksChanged then NS.NotifyTasksChanged("MOVE") end
+  return true
+end
+
+function T:GetAll()
+  local _, me = ensureTables()
+  return me.tasks
+end
+
+-- Import behavior: ask merge vs replace via popup
+function T:ImportWithPrompt(data)
+  local function doReplace()
+    local ok, n = T:Import(data, true)
+    if ok and NS.Print then NS:Print((NS.L.IMPORT_OK_FMT or "Imported %d tasks."):format(n or 0)) end
+  end
+  local function doMerge()
+    local ok, n = T:Import(data, false)
+    if ok and NS.Print then NS:Print((NS.L.IMPORT_OK_FMT or "Imported %d tasks."):format(n or 0)) end
+  end
+  if U and U.Confirm then
+    U.Confirm(NS.L.IMPORT_MERGE_OR_REPLACE or "Import: merge with existing tasks, or replace them?",
+              NS.L.IMPORT_REPLACE or "Replace", NS.L.IMPORT_MERGE or "Merge", doReplace, doMerge)
+  else
+    doMerge()
+  end
 end

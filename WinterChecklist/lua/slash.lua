@@ -8,41 +8,45 @@ local L = NS.L
 SLASH_WINTERCHECKLIST1 = "/wcl"
 SlashCmdList["WINTERCHECKLIST"] = function(msg)
   msg = (msg or ""):lower()
+  
   local cmd, rest = msg:match("^(%S+)%s*(.*)$")
+  
   if not cmd or cmd == "" or cmd == "toggle" then
     NS:ToggleUI()
+  
   elseif cmd == "debug" then
     WinterChecklistDB.debug = not WinterChecklistDB.debug
     NS:Print(WinterChecklistDB.debug and L.DEBUG_ENABLED or L.DEBUG_DISABLED)
+  
   elseif cmd == "minimap" then
     NS:ToggleMinimapIcon()
+  
   elseif cmd == "options" or cmd == "opt" then
     if NS.Options and NS.Options.Open then NS.Options:Open() end
-elseif cmd == "export" then
-  if NS.Tasks and NS.Tasks.Export then
-    local payload = NS.Tasks:Export()
-    if NS.Util and NS.Util.ShowTextPopup then
-      NS.Util.ShowTextPopup(L.EXPORT_TITLE or "WinterChecklist — Export", payload)
-    else
-      NS:Print(L.EXPORT_READY or "Export string ready. Copy from the popup.")
-      print(payload)
+  
+  elseif cmd == "export" then
+    if NS.Tasks and NS.Tasks.Export then
+      local payload = NS.Tasks:Export()
+      if NS.Util and NS.Util.ShowTextPopup then
+        NS.Util.ShowTextPopup(L.EXPORT_TITLE or "WinterChecklist — Export", payload)
+      else
+        NS:Print(L.EXPORT_READY or "Export string ready. Copy from the popup.")
+        print(payload)
+      end
     end
-  end
-elseif cmd == "import" then
-  local data = NS.Util and NS.Util.trim(rest or "") or (rest or "")
-  if (not data or data == "") and NS.Util and NS.Util.ShowTextPopup then
-    NS.Util.ShowTextPopup(L.IMPORT_TITLE or "WinterChecklist — Paste Import", "")
-    NS:Print(L.IMPORT_INSTRUCTIONS or "Paste an export string into the popup and click Accept.")
-  elseif NS.Tasks and NS.Tasks.Import then
-    local ok, count = NS.Tasks:Import(data)
-    if ok then
-      NS:Print((L.IMPORT_OK_FMT or "Imported %d tasks."):format(count or 0))
-    else
-      NS:Print(L.IMPORT_FAILED or "Import failed; invalid data.")
+
+  elseif cmd == "import" then
+    local data = NS.Util and NS.Util.trim(rest or "") or (rest or "")
+    if (not data or data == "") and NS.Util and NS.Util.ShowTextPopup then
+      NS.Util.ShowTextPopup(L.IMPORT_TITLE or "WinterChecklist — Paste Import", "")
+      NS:Print(L.IMPORT_INSTRUCTIONS or "Paste an export string into the popup and click Accept.")
+    elseif NS.Tasks and NS.Tasks.ImportWithPrompt then
+      NS.Tasks:ImportWithPrompt(data)
     end
-  end
-elseif cmd == "help" or cmd == "?" then
+
+  elseif cmd == "help" or cmd == "?" then
     if NS.Help then NS.Help:Show(NS.frame) end
+
   else
     NS:Print(L.SLASH_HEADER)
     NS:Print("  " .. L.SLASH_TOGGLE)

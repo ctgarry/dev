@@ -12,6 +12,7 @@ yarn.lock
 # VS Code
 .vscode/*
 !.vscode/tasks.json
+/.hererocks/
 
 # Local build & artifacts
 .dist/

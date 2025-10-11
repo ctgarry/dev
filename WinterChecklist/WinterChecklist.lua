@@ -185,9 +185,35 @@ function NS:RefreshMainUIForOptions()
   NS.frame:SetAlpha(locked and 0.97 or 1.0)
 end
 
-function NS:ShowUI() if NS.frame then NS.frame:Show(); WinterChecklistDB.frame.shown = true end end
-function NS:HideUI() if NS.frame then NS.frame:Hide(); WinterChecklistDB.frame.shown = false end end
-function NS:ToggleUI() if NS.frame and NS.frame:IsShown() then NS:HideUI() else NS:ShowUI() end end
+-- ------------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------
+-- Ensure (build-once, then return) the main frame for callers outside this file
+function NS.EnsureMainFrame()
+  if not NS.frame then
+    CreateMainFrame()  -- local function above; builds NS.frame and applies prefs
+  end
+  return NS.frame
+end
+
+-- Back-compat alias if other files expect this name
+NS.BuildMainFrame = NS.EnsureMainFrame
+
+function NS:ShowUI()
+  local f = NS.EnsureMainFrame()
+  if f then f:Show(); WinterChecklistDB.frame.shown = true end
+end
+
+function NS:HideUI()
+  if NS.frame then NS.frame:Hide(); WinterChecklistDB.frame.shown = false end
+end
+
+function NS:ToggleUI()
+  local f = NS.EnsureMainFrame()
+  if f and f:IsShown() then NS:HideUI() else NS:ShowUI() end
+end
+-- ------------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------
+
 
 -- Minimap visibility helper used by options/minimap
 function NS:ApplyMinimapVisibility()

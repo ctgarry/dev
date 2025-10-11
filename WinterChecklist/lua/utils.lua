@@ -43,8 +43,8 @@ function U.ShowTextPopup(title, text, onAccept)
   if not StaticPopupDialogs then StaticPopupDialogs = {} end
   StaticPopupDialogs["WCL_TEXT_POPUP"] = {
     text = title or "WinterChecklist",
-    button1 = (NS.L and NS.L.OK) or OKAY or "OK",
-    button2 = (NS.L and NS.L.CANCEL) or CANCEL or "Cancel",
+    button1 = (NS.L and NS.L.OK) or (OKAY or "OK"),
+    button2 = (NS.L and NS.L.CANCEL) or (CANCEL or "Cancel"),
     hasEditBox = true,
     maxLetters = 0,
     OnShow = function(self)

@@ -165,6 +165,8 @@ local function CreateMainFrame()
   body:SetJustifyH("LEFT")
   body:SetText("|cffaaaaaa" .. L.TASKS_HEADER .. " — " .. L.HELP_SUMMARY_BODY .. "|r")
 
+  f._contentTopOffset = 64
+
   -- Close
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", 0, 0)
@@ -206,7 +208,7 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     WinterChecklistDB.accountWide = WinterChecklistDB.accountWide or true -- default ON per user
   elseif event == "PLAYER_LOGIN" then
     CreateMainFrame()
-    if NS.BootstrapUIList then NS.BootstrapUIList() end  -- attach the in-frame task list
+    if NS.BootstrapUIList then NS.BootstrapUIList() end
     NS:ApplyMinimapVisibility()
   end
 end)
@@ -233,7 +235,7 @@ function NS.EnhanceMainFrame()
   -- ESC to close without needing a global name
   f:EnableKeyboard(true)
   if f.SetPropagateKeyboardInput then
-    f:SetPropagateKeyboardInput(true)  -- Retail; not present in Classic 1.15
+    f:SetPropagateKeyboardInput(true)
   end
   f:HookScript("OnKeyDown", function(self, key)
     if key == "ESCAPE" then self:Hide() end

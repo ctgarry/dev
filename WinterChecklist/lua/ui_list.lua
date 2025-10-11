@@ -13,6 +13,13 @@ local ROW_H = 20
 local HEADER_H = 32
 local PAD = 8
 
+-- Layout constants for toolbar
+local EDITW = 260
+local BTN_W = 84
+local DD_W  = 128
+local YTOP  = 84  -- distance from frame top to toolbar baseline
+local ROWH  = 24
+
 local function counts()
   if not NS.Tasks or not NS.Tasks.GetAll then return 0,0 end
   local t = NS.Tasks:GetAll()
@@ -45,7 +52,7 @@ function M:Init(parent)
   -- Header controls ------------------------------------------------------------
   local f = CreateFrame("Frame", nil, parent)
   self.frame = f
-  f:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, -40)
+  f:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, -YTOP)
   f:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -12, 12)
 
   local search = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
@@ -94,12 +101,14 @@ function M:Init(parent)
   btnClear:SetSize(60, 20); btnClear:SetPoint("RIGHT", btnAdd, "LEFT", -6, 0); btnClear:SetText(L.CLEAR or "Clear")
   btnClear:SetScript("OnClick", function()
     U.Confirm(L.CLEAR_ALL or "Clear all tasks?", L.YES or "Yes", L.NO or "No", function() NS.Tasks:Clear(); M:Refresh() end)
+  self.btnClear = btnClear
   end)
 
   local btnImport = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   btnImport:SetSize(60, 20); btnImport:SetPoint("RIGHT", btnClear, "LEFT", -6, 0); btnImport:SetText(L.IMPORT or "Import")
   btnImport:SetScript("OnClick", function()
     U.ShowTextPopup(L.IMPORT_TITLE or "Paste Import", "", function(s) if s and s ~= "" then NS.Tasks:ImportWithPrompt(s) end end)
+  self.btnImport = btnImport
   end)
 
   local btnExport = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -108,13 +117,35 @@ function M:Init(parent)
     local payload = NS.Tasks:Export()
     U.ShowTextPopup(L.EXPORT_TITLE or "Tasks Export", payload)
   end)
+  self.btnExport = btnExport
+
+  -- Widths
+  if self.search and self.search.SetWidth then self.search:SetWidth(EDITW) end
+  if self.btnExport then self.btnExport:SetWidth(BTN_W) end
+  if self.btnImport then self.btnImport:SetWidth(BTN_W) end
+  if self.btnClear  then self.btnClear:SetWidth(BTN_W) end
+  if self.btnAdd    then self.btnAdd:SetWidth(BTN_W) end
+  if self.freq and UIDropDownMenu_SetWidth then UIDropDownMenu_SetWidth(self.freq, DD_W) end
+
+  -- Hook layout on resize/show
+  if not self._sizeHooked then
+    parent:HookScript("OnSizeChanged", function() if M.Layout then M:Layout(parent) end end)
+    f:HookScript("OnShow", function() if M.Layout then M:Layout(parent) end end)
+    self._sizeHooked = true
+  end
+
+  -- initial layout
+  if M.Layout then M:Layout(parent) end
 
   -- Scroll area ----------------------------------------------------------------
   local scroll = CreateFrame("Frame", nil, f)
-  scroll:SetPoint("TOPLEFT", search, "BOTTOMLEFT", 0, -PAD)
-  scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -(HEADER_H))
-  scroll:SetPoint("BOTTOM", f, "BOTTOM", 0, 0)
+  -- points set in Layout
   self.scroll = scroll
+
+  -- Empty state text
+  self.emptyText = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  self.emptyText:SetText(L.EMPTY_STATE or "No tasks yet — click Add, or type: /wcl add <task>")
+  self.emptyText:Hide()
 
   self.rows = {}
   self:Refresh()
@@ -157,6 +188,7 @@ function M:Refresh()
   local idx = 1
   for i, row in ipairs(self.rows) do row:Hide() end
 
+  self.visibleCount = 0
   for i, rec in ipairs(t) do
     if passFilter(rec, needle, wantInc, wantFreq) then
       local r = ensureRow(idx, self.scroll)
@@ -164,6 +196,7 @@ function M:Refresh()
       r:SetPoint("TOPLEFT", self.scroll, "TOPLEFT", 0, y)
       y = y - ROW_H - 2
       r:Show()
+      self.visibleCount = self.visibleCount + 1
 
       r.txt:SetText(rec.text or "")
       r.chk:SetChecked(rec.done and true or false)
@@ -190,6 +223,77 @@ function M:Refresh()
     end
   end
 
+    -- Empty state toggle
+  if self.emptyText and self.scroll then
+    if (self.visibleCount or 0) == 0 then
+      self.emptyText:ClearAllPoints()
+      self.emptyText:SetPoint("TOPLEFT", self.scroll, "TOPLEFT", 4, -4)
+      self.emptyText:Show()
+    else
+      self.emptyText:Hide()
+    end
+  end
+
   -- Update minimap text
   if NS.EnhanceMinimapText then NS.EnhanceMinimapText() end
+end
+
+
+function M:Layout(parent)
+  if not parent or not self.frame then return end
+  local f = self.frame
+
+  local function reset(w) if w and w.ClearAllPoints then w:ClearAllPoints() end end
+
+  reset(self.search); reset(self.freq); reset(self.onlyIncomplete)
+  reset(self.btnExport); reset(self.btnImport); reset(self.btnClear); reset(self.btnAdd)
+  if self.scroll and self.scroll.ClearAllPoints then self.scroll:ClearAllPoints() end
+
+  local x = 0
+  local y = 0
+
+  -- left: search
+  if self.search then
+    self.search:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
+    self.search:SetHeight(ROWH)
+    x = EDITW + 8
+  end
+
+  -- next: dropdown
+  if self.freq then
+    self.freq:SetPoint("TOPLEFT", f, "TOPLEFT", x, -2)
+    x = x + DD_W + 26 + 8
+  end
+
+  -- next: incomplete checkbox
+  if self.onlyIncomplete then
+    self.onlyIncomplete:SetPoint("TOPLEFT", f, "TOPLEFT", x, -2)
+    if self.onlyIncomplete.text and self.onlyIncomplete.text.SetTextColor then
+      self.onlyIncomplete.text:SetTextColor(1,1,1)
+    end
+    x = x + (self.onlyIncomplete.text and self.onlyIncomplete.text:GetStringWidth() or 80) + 28
+  end
+
+  -- right cluster: Add, Clear, Import, Export (right-aligned)
+  local rightX = f:GetWidth() - 4
+  local function placeRight(btn)
+    if not btn then return end
+    btn:SetHeight(ROWH)
+    btn:ClearAllPoints()
+    rightX = rightX - btn:GetWidth()
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", rightX, 0)
+    rightX = rightX - 8
+  end
+  placeRight(self.btnAdd)
+  placeRight(self.btnClear)
+  placeRight(self.btnImport)
+  placeRight(self.btnExport)
+
+  -- scroll fills remaining
+  if self.scroll then
+    self.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -(ROWH + 8))
+    self.scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -(ROWH + 8))
+    self.scroll:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
+    self.scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
+  end
 end

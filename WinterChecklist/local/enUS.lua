@@ -21,6 +21,8 @@ L.RESET_ALL                = "Reset All"
 L.CONFIRM                  = "Confirm"
 L.YES                      = "Yes"
 L.NO                       = "No"
+L.EMPTY_STATE              = "No tasks yet — click Add, or type: /wcl add <task>"
+L.EMPTY_STATE_FILTERED     = "No tasks match the current filters."
 
 
 -- Options

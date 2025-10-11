@@ -1,6 +1,7 @@
 --[[
   @file    lua/options.lua
   @brief   Interface Options panel (Retail + Classic) incl. profile task copy and feedback (sound).
+           Adds an "About" subcategory conservatively; guards against double registration.
 ]]
 local ADDON, NS = ...
 local L, U = NS.L, NS.Util
@@ -24,8 +25,55 @@ local function CheckBox(parent, label, anchor, onGet, onSet)
   if anchor then cb:SetPoint(unpack(anchor)) else cb:SetPoint("TOPLEFT", 16, -16) end
   cb.Text:SetText(label)
   cb:SetScript("OnClick", function(self) onSet(self:GetChecked()) end)
-  cb:SetScript("OnShow", function(self) self:SetChecked(onGet()) end)
+  cb:SetScript("OnShow", function(self)
+    self:SetChecked(onGet())
+    local w = self.Text and (self.Text:GetStringWidth() + 24) or 140
+    self:SetHitRectInsets(0, -w, 0, 0)
+  end)
   return cb
+end
+
+local function addAboutSubcategory(parentPanel)
+  if parentPanel._wclAboutPanel then return end  -- guard: only create once
+
+  local p = CreateFrame("Frame")
+  p.name   = L.OPT_ABOUT_TITLE
+  p.parent = parentPanel.name
+  parentPanel._wclAboutPanel = p
+
+  -- Static text only (no scroll frames)
+  local title = p:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", 16, -16)
+
+  local addonName = (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Title")) or ADDON or "WinterChecklist"
+  local version   = (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Version")) or ""
+  if version ~= "" then
+    title:SetText(string.format("%s  |cffffd100%s|r", addonName, version))
+  else
+    title:SetText(addonName)
+  end
+
+  local text = p:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  text:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -12)
+  text:SetWidth(680)
+  text:SetJustifyH("LEFT")
+  local chunks = { L.OPT_ABOUT_INFO, "", L.OPT_ABOUT_USAGE, "", L.OPT_ABOUT_SLASH, "", L.OPT_ABOUT_CREDITS }
+  text:SetText(table.concat(chunks, "\n"))
+
+  -- Register subcategory (Retail path)
+  if Settings and Settings.RegisterCanvasLayoutSubcategory and parentPanel.categoryID then
+    local parentCat = Settings.GetCategory and Settings.GetCategory(parentPanel.categoryID)
+    if parentCat then
+      local sub = Settings.RegisterCanvasLayoutSubcategory(parentCat, p, p.name)
+      Settings.RegisterAddOnCategory(sub)
+      return
+    end
+  end
+
+  -- Classic / fallback: legacy API
+  if InterfaceOptions_AddCategory then
+    InterfaceOptions_AddCategory(p)
+  end
 end
 
 local function ensurePanel()
@@ -34,7 +82,7 @@ local function ensurePanel()
   p.name = L.OPT_PANEL_TITLE
 
   if Settings and Settings.RegisterCanvasLayoutCategory then
-    local cat = Settings.RegisterCanvasLayoutCategory(p, L.OPT_PANEL_TITLE)
+    local cat = Settings.RegisterCanvasLayoutCategory(p, p.name)
     Opt.panel = p; p.categoryID = cat:GetID()
     Settings.RegisterAddOnCategory(cat)
   else
@@ -47,9 +95,21 @@ local function ensurePanel()
     function() return not (WinterChecklistDB.minimap and WinterChecklistDB.minimap.hide) end,
     function(val) WinterChecklistDB.minimap.hide = not val; NS:ApplyMinimapVisibility() end
   )
+  p._wclMinimap = cbMinimap
+
+  -- Account-wide tasks
+  local cbAccount = CheckBox(p, L.OPT_ACCOUNT_WIDE, {"TOPLEFT", cbMinimap, "BOTTOMLEFT", 0, -8},
+    function() return not not (WinterChecklistDB and WinterChecklistDB.accountWide) end,
+    function(val)
+      WinterChecklistDB.accountWide = val and true or false
+      if NS.UIList and NS.UIList.Refresh then NS.UIList:Refresh() end
+    end
+  )
+  cbAccount.tooltipText = L.OPT_ACCOUNT_WIDE_TT
+  p._wclAccountCheck = cbAccount
 
   -- Debug
-  local cbDebug = CheckBox(p, L.OPT_DEBUG, {"TOPLEFT", cbMinimap, "BOTTOMLEFT", 0, -8},
+  local cbDebug = CheckBox(p, L.OPT_DEBUG, {"TOPLEFT", cbAccount, "BOTTOMLEFT", 0, -8},
     function() return not not WinterChecklistDB.debug end,
     function(val) WinterChecklistDB.debug = val; NS:Print(val and L.DEBUG_ENABLED or L.DEBUG_DISABLED) end
   )
@@ -126,7 +186,10 @@ local function ensurePanel()
 
   local btn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
   btn:SetSize(140, 22)
-  btn:SetPoint("LEFT", dd2, "RIGHT", 0, 0)
+  UIDropDownMenu_SetWidth(dd2, 180)
+  UIDropDownMenu_JustifyText(dd2, "LEFT")
+  btn:SetPoint("LEFT", dd2, "RIGHT", 12, 0)
+  btn:SetSize(120, 22)
   btn:SetText(L.OPT_COPY_BUTTON)
   btn:SetScript("OnClick", function()
     if fromKey and NS.Tasks and NS.Tasks.CopyFromCharacter then
@@ -134,6 +197,9 @@ local function ensurePanel()
       NS:Print(L.TASKS_COPIED_FMT:format(fromKey))
     end
   end)
+
+  -- Add "About" subcategory (safe registration)
+  addAboutSubcategory(p)
 end
 
 C_Timer.After(0, ensurePanel)
@@ -145,15 +211,13 @@ local function wcl_add_open_button()
   local p = NS.Options.panel
   if p._wclOpenButton then return end
 
-  -- Create button
   local btn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
   btn:SetSize(160, 24)
   btn:SetPoint("TOPRIGHT", -24, -24)
-  btn:SetText((NS.L.OPEN_MAIN or "Open Main Window"))
+  btn:SetText((NS.L.OPEN_MAIN))
   btn:SetScript("OnClick", function() if NS.ToggleUI then NS:ToggleUI() end end)
   p._wclOpenButton = btn
 
-  -- Register category (Retail)
   if NS.IsRetail and NS.IsRetail() and Settings and Settings.RegisterAddOnCategory then
     if not p.categoryID then
       p.categoryID = Settings.RegisterAddOnCategory(p)
@@ -162,22 +226,3 @@ local function wcl_add_open_button()
 end
 
 C_Timer.After(0.25, wcl_add_open_button)
-
-
--- Milestone A: Options additions ----------------------------------------------
-local function add_account_toggle()
-  if not NS.Options or not NS.Options.panel then return end
-  local p = NS.Options.panel
-  if p._wclAccountCheck then return end
-  local cb = CreateFrame("CheckButton", nil, p, "InterfaceOptionsCheckButtonTemplate")
-  cb:SetPoint("TOPLEFT", 24, -24)
-  cb.Text:SetText(L.OPT_ACCOUNT_WIDE or "Account-wide tasks")
-  cb:SetChecked(WinterChecklistDB and WinterChecklistDB.accountWide)
-  cb:SetScript("OnClick", function(self)
-    WinterChecklistDB.accountWide = self:GetChecked() and true or false
-    if NS.UIList and NS.UIList.Refresh then NS.UIList:Refresh() end
-  end)
-  p._wclAccountCheck = cb
-end
-
-C_Timer.After(0.3, add_account_toggle)

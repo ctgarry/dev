@@ -1,5 +1,5 @@
-## Interface: 11505
-## Title: WinterChecklist
+## Interface: 11507
+## Title: WinterChecklist (Classic Era)
 ## Notes: Clean-slate Classic Era addon scaffold
 ## Author: CTGarry
 ## Version: 1.0.0
@@ -12,13 +12,13 @@ lib/LibStub/LibStub.lua
 lib/LibSharedMedia-3.0/LibSharedMedia-3.0.lua
 lib/CallbackHandler-1.0/CallbackHandler-1.0.lua
 
-## lua/utils.lua
-## local/enUS.lua
-## WinterChecklist.lua
-## lua/minimap.lua
-## lua/tasks.lua
-## lua/options.lua
-## lua/help.lua
-## lua/slash.lua
-## lua/ui_list.lua
-lua/hello2.lua
+lua/utils.lua
+local/enUS.lua
+WinterChecklist.lua
+lua/minimap.lua
+lua/tasks.lua
+lua/options.lua
+lua/help.lua
+lua/slash.lua
+lua/ui_list.lua
+lua/hello.lua

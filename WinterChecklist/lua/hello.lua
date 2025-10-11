@@ -232,7 +232,25 @@ end
 -- Slash command: /wclhello
 ----------------------------------------------------------------------
 SLASH_WCLHELLO1 = "/wclhello"
-SlashCmdList.WCLHELLO = function()
-  local f = CreatePrototypeWindow()
-  if f:IsShown() then f:Hide() else f:Show() end
+SlashCmdList.WCLHELLO = function(msg)
+  local f = NS and NS.EnsureMainFrame and NS.EnsureMainFrame()  -- idempotent constructor
+  if not f then
+    if NS and NS.BuildMainFrame then
+      f = NS.BuildMainFrame()
+    end
+  end
+  if not f then
+    print("|cffff7f00WinterChecklist:|r UI not ready (no frame).")
+    return
+  end
+ 
+  -- If user typed "toggle" (or nothing), do a smart toggle; otherwise force show
+  local cmd = (msg or ""):lower():match("^%s*(%S*)")
+  if cmd == "hide" then
+    f:Hide()
+  elseif cmd == "show" then
+    f:Show(); f:Raise()
+  else
+    if f:IsShown() then f:Hide() else f:Show(); f:Raise() end
+  end
 end

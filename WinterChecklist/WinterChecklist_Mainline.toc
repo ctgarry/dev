@@ -1,5 +1,5 @@
 ## Interface: 110100
-## Title: WinterChecklist
+## Title: WinterChecklist (Retail)
 ## Notes: Retail build
 ## Author: CTGarry
 ## Version: 1.0.0

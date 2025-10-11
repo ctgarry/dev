@@ -206,6 +206,7 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     WinterChecklistDB.accountWide = WinterChecklistDB.accountWide or true -- default ON per user
   elseif event == "PLAYER_LOGIN" then
     CreateMainFrame()
+    if NS.BootstrapUIList then NS.BootstrapUIList() end  -- attach the in-frame task list
     NS:ApplyMinimapVisibility()
   end
 end)
@@ -231,7 +232,9 @@ function NS.EnhanceMainFrame()
   if not f then return end
   -- ESC to close without needing a global name
   f:EnableKeyboard(true)
-  f:SetPropagateKeyboardInput(true)
+  if f.SetPropagateKeyboardInput then
+    f:SetPropagateKeyboardInput(true)  -- Retail; not present in Classic 1.15
+  end
   f:HookScript("OnKeyDown", function(self, key)
     if key == "ESCAPE" then self:Hide() end
   end)

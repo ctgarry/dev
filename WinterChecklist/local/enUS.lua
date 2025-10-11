@@ -109,6 +109,7 @@ L.FILTER_SECTION           = "Filters"
 
 -- Task management (Buttons/Check Boxes)
 L.CLEAR                    = "Clear"
+L.CLEAR_ALL                = "Clear all tasks?"
 L.ADD_TASK                 = "Add Task"
 L.EDIT_TASK                = "Edit Task"
 L.DELETE_TASK              = "Delete Task"
@@ -128,6 +129,8 @@ L.FREQ_ONE_TIME            = "One Time"
 -- EXPORT
 L.EXPORT                   = "Export"
 L.EXPORT_HEADER            = "WinterChecklist Task Export"
+L.EXPORT_TITLE             = "Tasks Export"
+L.EXPORT_READY             = "Export string ready. Copy from the popup."
 L.EXPORT_INSTRUCTIONS      = "Copy the text below to export your tasks. To import tasks, paste the text into the import box and click Import."
 L.EXPORT_DATA              = "%s"  -- The actual export data string
 L.EXPORT_COPY_PROMPT       = "Copy the text below to export your tasks. Use /wcl import to import tasks into another character."
@@ -143,6 +146,7 @@ L.EXPORT_COPIED            = "Export data copied to clipboard."
 -- IMPORT (appearance)
 L.IMPORT                   = "Import"
 L.IMPORT_HEADER            = "WinterChecklist Task Import"
+L.IMPORT_TITLE             = "Paste Import"
 L.IMPORT_BUTTON            = L.IMPORT                  
 L.IMPORT_MERGE_BUTTON      = "Import Merge"
 L.IMPORT_REPLACE           = "Import Replace"

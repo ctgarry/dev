@@ -45,8 +45,8 @@ if hasLDB and hasIcon then
     end,
     OnTooltipShow = function(tt)
       tt:AddLine(ADDON)
-      tt:AddLine(L.SLASH_TOGGLE, 1,1,1)
-      tt:AddLine(L.SLASH_OPTIONS, 1,1,1)
+      tt:AddLine(L.SLASH_TOGGLE or "/wcl - toggle", 1,1,1)
+      tt:AddLine(L.SLASH_OPTIONS or "/wcl options - open Options", 1,1,1)
     end
   })
 

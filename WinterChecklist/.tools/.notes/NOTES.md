@@ -156,3 +156,17 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
 
 _These fundamentals cover 90% of the Lua behavior you’ll meet when building or debugging WoW addons._
 
+## 10. Solo Git Workflow
+
+  - Branching: Keep main clean. Create feature branches (git checkout -b feature/luacheck) for work, merge back once tested.
+  - Status checks: Run git status often to confirm what’s staged/unstaged; catch accidental changes early.
+  - Small commits: Group related edits; git add -p helps stage only the intended hunks.
+  - Commit messages: Use present tense summaries (“Add luacheck globals”). Include context if needed in the body.
+  - Sync cycle: For remotes, git fetch + git pull --rebase before starting, git push after review/testing.
+  - Housekeeping: Clean temp files before committing; keep .gitignore updated. Tag releases with git tag when ready to package.
+  - Recovery: If something goes wrong, use git stash, git commit --amend, or new branches instead of destructive resets.
+  
+## 11. BLizzard Global Namespace
+
+  - Think of _G as Lua’s global environment table. In WoW, Blizzard populates _G with every API object, frame, and constant before your addon runs. So when you write local UIParent = _G.UIParent, you’re pulling the value Blizzard registered into that table. Conceptually it’s the shared “global namespace” rather than a special Blizzard object—Lua simply treats all globals as keys on _G, and Blizzard uses that to expose its API.
+

@@ -50,6 +50,9 @@
         "-Mode", "install"
       ],
       "problemMatcher": []
-    }
+    },
+    { "label": "fmt:stylua", "type": "shell", "command": "stylua ." },
+    { "label": "lint:luacheck", "type": "shell", "command": "luacheck . --codes --exclude-files \"lib/**\"" },
+    { "label": "fmt+lint", "dependsOn": ["fmt:stylua","lint:luacheck"], "dependsOrder": "sequence" }
   ]
 }

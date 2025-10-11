@@ -21,5 +21,4 @@ lua/options.lua
 lua/help.lua
 lua/slash.lua
 lua/ui_list.lua
-lua/hello.lua
 lua/hello2.lua

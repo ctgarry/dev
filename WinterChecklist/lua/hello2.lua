@@ -21,7 +21,7 @@ NS = NS or {}
 -- THEME / TWEAKS
 ----------------------------------------------------------------------
 local THEME = {
-  titleText      = "WinterChecklist – Scrollable Prototype",
+  titleText      = "WinterChecklist - Scrollable Prototype",
   width          = 520,
   height         = 380,
   minW = 380, minH = 280,

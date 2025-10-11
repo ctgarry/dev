@@ -23,7 +23,7 @@ NS = NS or {}
 -- THEME / TWEAKS (edit here to play with look & feel)
 ----------------------------------------------------------------------
 local THEME = {
-  titleText      = "WinterChecklist – Layout Prototype",
+  titleText      = "WinterChecklist - Layout Prototype",
   width          = 480,
   height         = 360,
   minW = 360, minH = 260,
@@ -92,6 +92,7 @@ local function GridLayout(parent, items, rows, cols, opts)
         for k = 1, (c-1) do x = x + (colW[k] or 0) + gapX end
         local y = -(offY + (r-1) * (rowH + gapY))
         PSetPoint(f, "TOPLEFT", parent, "TOPLEFT", x, y)
+        -- If this element should have a "suggested size", apply it:
         local w = colW[c]
         if w and w > 0 then PSetSize(f, w, rowH) else f:SetHeight(rowH) end
       end

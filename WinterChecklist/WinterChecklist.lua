@@ -13,7 +13,7 @@ _G[ADDON] = NS
 -- Namespaces ------------------------------------------------------------------
 NS.Util  = NS.Util  or {}      -- from lua/utils.lua
 NS.Const = NS.Const or {}      -- constants collected here
-local U, C = NS.Util, NS.Const
+local C = NS.Const
 
 -- Flavor helpers
 function NS.IsRetail()
@@ -25,7 +25,7 @@ function NS.IsClassic()
 end
 
 -- Localization table (enUS sets NS.L; fallback to key if missing)
-NS.L = NS.L or setmetatable({}, { __index = function(t, k) return k end })
+NS.L = NS.L or setmetatable({}, { __index = function(_, k) return k end })
 local L = NS.L
 
 -- SavedVariables container (declared in TOC via ## SavedVariables)
@@ -119,11 +119,11 @@ local function store_position(frame, conf)
 end
 
 -- Logging
-function NS:Print(msg)
+function NS.Print(_, msg)
   if msg == nil then return end
   DEFAULT_CHAT_FRAME:AddMessage(("|cff00ccff%s:|r %s"):format(ADDON, tostring(msg)))
 end
-function NS:DPrint(msg) if WinterChecklistDB and WinterChecklistDB.debug then NS:Print(msg) end end
+function NS.DPrint(_, msg) if WinterChecklistDB and WinterChecklistDB.debug then NS:Print(msg) end end
 
 -- Main Frame ------------------------------------------------------------------
 local function CreateMainFrame()
@@ -173,11 +173,11 @@ local function CreateMainFrame()
 
   NS.frame = f
   if WinterChecklistDB.frame.shown then f:Show() else f:Hide() end
-  NS:RefreshMainUIForOptions()
+  NS.RefreshMainUIForOptions()
 end
 
 -- Apply UI prefs to the already-built main frame
-function NS:RefreshMainUIForOptions()
+function NS.RefreshMainUIForOptions()
   if not NS.frame then return end
   local locked   = WinterChecklistDB.ui and WinterChecklistDB.ui.locked
   local showHelp = WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false)
@@ -198,25 +198,25 @@ end
 -- Back-compat alias if other files expect this name
 NS.BuildMainFrame = NS.EnsureMainFrame
 
-function NS:ShowUI()
+function NS.ShowUI()
   local f = NS.EnsureMainFrame()
   if f then f:Show(); WinterChecklistDB.frame.shown = true end
 end
 
-function NS:HideUI()
+function NS.HideUI()
   if NS.frame then NS.frame:Hide(); WinterChecklistDB.frame.shown = false end
 end
 
-function NS:ToggleUI()
+function NS.ToggleUI()
   local f = NS.EnsureMainFrame()
-  if f and f:IsShown() then NS:HideUI() else NS:ShowUI() end
+  if f and f:IsShown() then NS.HideUI() else NS.ShowUI() end
 end
 -- ------------------------------------------------------------------------------
 -- ------------------------------------------------------------------------------
 
 
 -- Minimap visibility helper used by options/minimap
-function NS:ApplyMinimapVisibility()
+function NS.ApplyMinimapVisibility()
   local ok, Icon = pcall(function() return LibStub("LibDBIcon-1.0") end)
   if ok and Icon and WinterChecklistDB.minimap then
     if WinterChecklistDB.minimap.hide then Icon:Hide("WinterChecklist")
@@ -235,7 +235,7 @@ ev:SetScript("OnEvent", function(_, event, arg1)
   elseif event == "PLAYER_LOGIN" then
     CreateMainFrame()
     if NS.BootstrapUIList then NS.BootstrapUIList() end
-    NS:ApplyMinimapVisibility()
+    NS.ApplyMinimapVisibility()
   end
 end)
 
@@ -286,7 +286,7 @@ function NS.EnhanceMinimapButtonClicks()
         WinterChecklistDB.debug = not WinterChecklistDB.debug
         if NS.Print then NS:Print(WinterChecklistDB.debug and (NS.L.DEBUG_ENABLED or "Debug ON") or (NS.L.DEBUG_DISABLED or "Debug OFF")) end
       else
-        if NS.ToggleUI then NS:ToggleUI() end
+        if NS.ToggleUI then NS.ToggleUI() end
       end
     end
   end)

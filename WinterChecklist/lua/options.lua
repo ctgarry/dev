@@ -93,7 +93,7 @@ local function ensurePanel()
   -- Minimap icon
   local cbMinimap = CheckBox(p, L.OPT_MINIMAP, {"TOPLEFT", 16, -16},
     function() return not (WinterChecklistDB.minimap and WinterChecklistDB.minimap.hide) end,
-    function(val) WinterChecklistDB.minimap.hide = not val; NS:ApplyMinimapVisibility() end
+    function(val) WinterChecklistDB.minimap.hide = not val; NS.ApplyMinimapVisibility() end
   )
   p._wclMinimap = cbMinimap
 
@@ -117,13 +117,13 @@ local function ensurePanel()
   -- Lock frame
   local cbLock = CheckBox(p, L.OPT_LOCK_FRAME, {"TOPLEFT", cbDebug, "BOTTOMLEFT", 0, -8},
     function() return not not (WinterChecklistDB.ui and WinterChecklistDB.ui.locked) end,
-    function(val) WinterChecklistDB.ui.locked = val; NS:RefreshMainUIForOptions() end
+    function(val) WinterChecklistDB.ui.locked = val; NS.RefreshMainUIForOptions() end
   )
 
   -- Show help button
   local cbHelp = CheckBox(p, L.OPT_SHOW_HELP, {"TOPLEFT", cbLock, "BOTTOMLEFT", 0, -8},
     function() return WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false) end,
-    function(val) WinterChecklistDB.ui.showHelp = val; NS:RefreshMainUIForOptions() end
+    function(val) WinterChecklistDB.ui.showHelp = val; NS.RefreshMainUIForOptions() end
   )
 
   -- Feedback section: sound on task add ---------------------------------------
@@ -215,7 +215,7 @@ local function wcl_add_open_button()
   btn:SetSize(160, 24)
   btn:SetPoint("TOPRIGHT", -24, -24)
   btn:SetText((NS.L.OPEN_MAIN))
-  btn:SetScript("OnClick", function() if NS.ToggleUI then NS:ToggleUI() end end)
+  btn:SetScript("OnClick", function() if NS.ToggleUI then NS.ToggleUI() end end)
   p._wclOpenButton = btn
 
   if NS.IsRetail and NS.IsRetail() and Settings and Settings.RegisterAddOnCategory then

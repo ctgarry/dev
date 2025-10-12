@@ -12,7 +12,7 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
   local cmd, rest = msg:match("^(%S+)%s*(.*)$")
   
   if not cmd or cmd == "" or cmd == "toggle" then
-    NS:ToggleUI()
+    NS.ToggleUI()
   
   elseif cmd == "debug" then
     WinterChecklistDB.debug = not WinterChecklistDB.debug

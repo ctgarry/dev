@@ -40,7 +40,7 @@ if hasLDB and hasIcon then
         WinterChecklistDB.debug = not WinterChecklistDB.debug
         if NS.Print then NS:Print(WinterChecklistDB.debug and (L.DEBUG_ENABLED or "Debug ON") or (L.DEBUG_DISABLED or "Debug OFF")) end
       else
-        if NS.ToggleUI then NS:ToggleUI() end
+        if NS.ToggleUI then NS.ToggleUI() end
       end
     end,
     OnTooltipShow = function(tt)
@@ -70,5 +70,5 @@ function NS:ToggleMinimapIcon()
   if not hasIcon then return end
   WinterChecklistDB.minimap = WinterChecklistDB.minimap or { hide=false }
   WinterChecklistDB.minimap.hide = not WinterChecklistDB.minimap.hide
-  NS:ApplyMinimapVisibility()
+  NS.ApplyMinimapVisibility()
 end

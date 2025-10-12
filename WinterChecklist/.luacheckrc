@@ -11,6 +11,47 @@ only = {
   "214",
 }
 std = "lua54"
+exclude_files = {
+  "lib/**",
+}
+read_globals = {
+  "AddonCompartmentFrame",
+  "C_Timer",
+  "DEFAULT_CHAT_FRAME",
+  "GameFontHighlight",
+  "GameFontHighlightSmall",
+  "GameFontNormalLarge",
+  "GetAddOnMetadata",
+  "GetBuildInfo",
+  "GetCursorPosition",
+  "GetMinimapShape",
+  "GetRealmName",
+  "InterfaceOptionsFrame_OpenToCategory",
+  "InterfaceOptions_AddCategory",
+  "IsShiftKeyDown",
+  "Minimap",
+  "PlaySound",
+  "PlaySoundFile",
+  "SOUNDKIT",
+  "Settings",
+  "UIParent",
+  "UIDropDownMenu_AddButton",
+  "UIDropDownMenu_CreateInfo",
+  "UIDropDownMenu_Initialize",
+  "UIDropDownMenu_JustifyText",
+  "UIDropDownMenu_SetText",
+  "UIDropDownMenu_SetWidth",
+  "UnitFullName",
+  "UnitName",
+  "WOW_PROJECT_ID",
+  "WOW_PROJECT_MAINLINE",
+  "securecallfunction",
+  "loadstring",
+  "wipe",
+  "StaticPopup_Show",
+  "OKAY",
+  "CANCEL",
+}
 globals = {
   "CreateFrame",
   "LibStub",
@@ -20,5 +61,8 @@ globals = {
   "SlashCmdList",
   "WinterChecklist",
   "WinterChecklistDB",
+  "StaticPopupDialogs",
+  "SLASH_WINTERCHECKLIST1",
+  "SLASH_WCLHELLO1",
 }
 ignore = { "631" } -- allow unused loop vars when needed

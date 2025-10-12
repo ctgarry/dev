@@ -13,13 +13,22 @@ local HELP_W = 360
 local HELP_H = 200
 
 function H:Show(anchorFrame)
-  if self.f then self.f:Hide() end
-  local f = CreateFrame("Frame", ADDON.."Help", UIParent, "BackdropTemplate")
+  if self.f then
+    self.f:Hide()
+  end
+  local f = CreateFrame("Frame", ADDON .. "Help", UIParent, "BackdropTemplate")
   self.f = f
-  f:SetBackdrop(C.BACKDROP or { bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
-                                 edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",
-                                 tile=true, tileSize=16, edgeSize=12,
-                                 insets={left=3,right=3,top=3,bottom=3} })
+  f:SetBackdrop(
+    C.BACKDROP
+      or {
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+      }
+  )
   f:SetSize(HELP_W, HELP_H)
   if anchorFrame then
     f:SetPoint("TOPLEFT", anchorFrame, "TOPRIGHT", 10, 0)

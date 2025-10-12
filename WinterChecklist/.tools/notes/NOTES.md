@@ -170,3 +170,44 @@ _These fundamentals cover 90% of the Lua behavior you’ll meet when building or
 
   - Think of _G as Lua’s global environment table. In WoW, Blizzard populates _G with every API object, frame, and constant before your addon runs. So when you write local UIParent = _G.UIParent, you’re pulling the value Blizzard registered into that table. Conceptually it’s the shared “global namespace” rather than a special Blizzard object—Lua simply treats all globals as keys on _G, and Blizzard uses that to expose its API.
 
+## 12. luacheck from inside Codex / VSCode
+
+ - 1) Put Codex on a leash (copy-paste one of these)
+
+    Use one micro-prompt at a time. These stop it from planning big workflows.
+
+    Just run luacheck (single command, no edits):
+     - Execute exactly this command and nothing else, in one step:
+       luacheck . --codes --exclude-files "lib/**"
+       Return only the raw stdout. If the command is not found, stop and ask me—do not install or plan anything.
+
+    Just run Stylua (single command, no edits):
+     - Execute exactly this command and nothing else:
+       .\\.tools\\bin\\stylua .
+       Return only the raw stdout. If unavailable, stop and ask.
+
+    If it still “plans”:
+     - Do not generate a plan. Do not install anything. Run exactly the one shell command I provided and paste only stdout. If you need more info, ask me first.
+
+    (Your environment already shows approval_policy: on-request, so these prompts should keep it to a single step.)
+
+  - 2) Kill the current runaway task cleanly
+    • In VS Code, close the Codex panel tab, then reopen it → New Task.
+    • If it won’t stop, Developer: Reload Window.
+    • Avoid Delete Session (that’s what triggered the MCP rollout errors earlier).
+
+  - 3) Keep momentum without Codex (fast local loop)
+    You’re already green here:
+       .\.tools\bin\stylua .
+       luacheck . --codes --exclude-files "lib/**"
+
+    If you want the warnings captured for review:
+       luacheck . --codes --exclude-files "lib/**" | Tee-Object -FilePath .\.tools\luacheck-last.txt
+
+  - 4) Next milestone without waiting on Codex
+    If you want, I’ll drop a rebased, line-exact patch for Pillar #1 (task panel add/remove/clear + import/export + SavedVariables) using our light format (File / Find / OLD / NEW). You can apply it manually or hand it to Codex to “apply exactly.” No planning, no installs.
+
+  - 5) If Codex times out again
+    Use this tiny diagnostic ask (it’s safe and quick):
+      - Print the absolute current working directory with pwd (PowerShell). Paste only the path. Do not do anything else.
+    If that returns instantly, follow with the single luacheck command above.

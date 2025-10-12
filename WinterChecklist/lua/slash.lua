@@ -2,28 +2,26 @@
   @file    lua/slash.lua
   @brief   /wcl commands to drive core actions.
 ]]
-local ADDON, NS = ...
+local _, NS = ...
 local L = NS.L
 
 SLASH_WINTERCHECKLIST1 = "/wcl"
 SlashCmdList["WINTERCHECKLIST"] = function(msg)
   msg = (msg or ""):lower()
-  
+
   local cmd, rest = msg:match("^(%S+)%s*(.*)$")
-  
+
   if not cmd or cmd == "" or cmd == "toggle" then
     NS.ToggleUI()
-  
   elseif cmd == "debug" then
     WinterChecklistDB.debug = not WinterChecklistDB.debug
     NS:Print(WinterChecklistDB.debug and L.DEBUG_ENABLED or L.DEBUG_DISABLED)
-  
   elseif cmd == "minimap" then
-    NS:ToggleMinimapIcon()
-  
+    NS.ToggleMinimapIcon()
   elseif cmd == "options" or cmd == "opt" then
-    if NS.Options and NS.Options.Open then NS.Options:Open() end
-  
+    if NS.Options and NS.Options.Open then
+      NS.Options:Open()
+    end
   elseif cmd == "export" then
     if NS.Tasks and NS.Tasks.Export then
       local payload = NS.Tasks:Export()
@@ -34,7 +32,6 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
         print(payload)
       end
     end
-
   elseif cmd == "import" then
     local data = NS.Util and NS.Util.trim(rest or "") or (rest or "")
     if (not data or data == "") and NS.Util and NS.Util.ShowTextPopup then
@@ -43,10 +40,10 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     elseif NS.Tasks and NS.Tasks.ImportWithPrompt then
       NS.Tasks:ImportWithPrompt(data)
     end
-
   elseif cmd == "help" or cmd == "?" then
-    if NS.Help then NS.Help:Show(NS.frame) end
-
+    if NS.Help then
+      NS.Help:Show(NS.frame)
+    end
   else
     NS:Print(L.SLASH_HEADER)
     NS:Print("  " .. L.SLASH_TOGGLE)

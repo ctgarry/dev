@@ -4,7 +4,8 @@
            Adds an "About" subcategory conservatively; guards against double registration.
 ]]
 local ADDON, NS = ...
-local L, U = NS.L, NS.Util
+local L = NS.L
+local unpack = table.unpack or _G.unpack
 
 local Opt = {}
 NS.Options = Opt
@@ -22,9 +23,15 @@ end
 
 local function CheckBox(parent, label, anchor, onGet, onSet)
   local cb = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
-  if anchor then cb:SetPoint(unpack(anchor)) else cb:SetPoint("TOPLEFT", 16, -16) end
+  if anchor then
+    cb:SetPoint(unpack(anchor))
+  else
+    cb:SetPoint("TOPLEFT", 16, -16)
+  end
   cb.Text:SetText(label)
-  cb:SetScript("OnClick", function(self) onSet(self:GetChecked()) end)
+  cb:SetScript("OnClick", function(self)
+    onSet(self:GetChecked())
+  end)
   cb:SetScript("OnShow", function(self)
     self:SetChecked(onGet())
     local w = self.Text and (self.Text:GetStringWidth() + 24) or 140
@@ -34,10 +41,12 @@ local function CheckBox(parent, label, anchor, onGet, onSet)
 end
 
 local function addAboutSubcategory(parentPanel)
-  if parentPanel._wclAboutPanel then return end  -- guard: only create once
+  if parentPanel._wclAboutPanel then
+    return
+  end -- guard: only create once
 
   local p = CreateFrame("Frame")
-  p.name   = L.OPT_ABOUT_TITLE
+  p.name = L.OPT_ABOUT_TITLE
   p.parent = parentPanel.name
   parentPanel._wclAboutPanel = p
 
@@ -46,7 +55,7 @@ local function addAboutSubcategory(parentPanel)
   title:SetPoint("TOPLEFT", 16, -16)
 
   local addonName = (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Title")) or ADDON or "WinterChecklist"
-  local version   = (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Version")) or ""
+  local version = (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Version")) or ""
   if version ~= "" then
     title:SetText(string.format("%s  |cffffd100%s|r", addonName, version))
   else
@@ -77,73 +86,92 @@ local function addAboutSubcategory(parentPanel)
 end
 
 local function ensurePanel()
-  if Opt.panel then return end
+  if Opt.panel then
+    return
+  end
   local p = CreateFrame("Frame")
   p.name = L.OPT_PANEL_TITLE
 
   if Settings and Settings.RegisterCanvasLayoutCategory then
     local cat = Settings.RegisterCanvasLayoutCategory(p, p.name)
-    Opt.panel = p; p.categoryID = cat:GetID()
+    Opt.panel = p
+    p.categoryID = cat:GetID()
     Settings.RegisterAddOnCategory(cat)
   else
     Opt.panel = p
-    if InterfaceOptions_AddCategory then InterfaceOptions_AddCategory(p) end
+    if InterfaceOptions_AddCategory then
+      InterfaceOptions_AddCategory(p)
+    end
   end
 
   -- Minimap icon
-  local cbMinimap = CheckBox(p, L.OPT_MINIMAP, {"TOPLEFT", 16, -16},
-    function() return not (WinterChecklistDB.minimap and WinterChecklistDB.minimap.hide) end,
-    function(val) WinterChecklistDB.minimap.hide = not val; NS.ApplyMinimapVisibility() end
-  )
+  local cbMinimap = CheckBox(p, L.OPT_MINIMAP, { "TOPLEFT", 16, -16 }, function()
+    return not (WinterChecklistDB.minimap and WinterChecklistDB.minimap.hide)
+  end, function(val)
+    WinterChecklistDB.minimap.hide = not val
+    NS.ApplyMinimapVisibility()
+  end)
   p._wclMinimap = cbMinimap
 
   -- Account-wide tasks
-  local cbAccount = CheckBox(p, L.OPT_ACCOUNT_WIDE, {"TOPLEFT", cbMinimap, "BOTTOMLEFT", 0, -8},
-    function() return not not (WinterChecklistDB and WinterChecklistDB.accountWide) end,
-    function(val)
-      WinterChecklistDB.accountWide = val and true or false
-      if NS.UIList and NS.UIList.Refresh then NS.UIList:Refresh() end
+  local cbAccount = CheckBox(p, L.OPT_ACCOUNT_WIDE, { "TOPLEFT", cbMinimap, "BOTTOMLEFT", 0, -8 }, function()
+    return not not (WinterChecklistDB and WinterChecklistDB.accountWide)
+  end, function(val)
+    WinterChecklistDB.accountWide = val and true or false
+    if NS.UIList and NS.UIList.Refresh then
+      NS.UIList:Refresh()
     end
-  )
+  end)
   cbAccount.tooltipText = L.OPT_ACCOUNT_WIDE_TT
   p._wclAccountCheck = cbAccount
 
   -- Debug
-  local cbDebug = CheckBox(p, L.OPT_DEBUG, {"TOPLEFT", cbAccount, "BOTTOMLEFT", 0, -8},
-    function() return not not WinterChecklistDB.debug end,
-    function(val) WinterChecklistDB.debug = val; NS:Print(val and L.DEBUG_ENABLED or L.DEBUG_DISABLED) end
-  )
+  local cbDebug = CheckBox(p, L.OPT_DEBUG, { "TOPLEFT", cbAccount, "BOTTOMLEFT", 0, -8 }, function()
+    return not not WinterChecklistDB.debug
+  end, function(val)
+    WinterChecklistDB.debug = val
+    NS:Print(val and L.DEBUG_ENABLED or L.DEBUG_DISABLED)
+  end)
 
   -- Lock frame
-  local cbLock = CheckBox(p, L.OPT_LOCK_FRAME, {"TOPLEFT", cbDebug, "BOTTOMLEFT", 0, -8},
-    function() return not not (WinterChecklistDB.ui and WinterChecklistDB.ui.locked) end,
-    function(val) WinterChecklistDB.ui.locked = val; NS.RefreshMainUIForOptions() end
-  )
+  local cbLock = CheckBox(p, L.OPT_LOCK_FRAME, { "TOPLEFT", cbDebug, "BOTTOMLEFT", 0, -8 }, function()
+    return not not (WinterChecklistDB.ui and WinterChecklistDB.ui.locked)
+  end, function(val)
+    WinterChecklistDB.ui.locked = val
+    NS.RefreshMainUIForOptions()
+  end)
 
   -- Show help button
-  local cbHelp = CheckBox(p, L.OPT_SHOW_HELP, {"TOPLEFT", cbLock, "BOTTOMLEFT", 0, -8},
-    function() return WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false) end,
-    function(val) WinterChecklistDB.ui.showHelp = val; NS.RefreshMainUIForOptions() end
-  )
+  local cbHelp = CheckBox(p, L.OPT_SHOW_HELP, { "TOPLEFT", cbLock, "BOTTOMLEFT", 0, -8 }, function()
+    return WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false)
+  end, function(val)
+    WinterChecklistDB.ui.showHelp = val
+    NS.RefreshMainUIForOptions()
+  end)
 
   -- Feedback section: sound on task add ---------------------------------------
   local fbTitle = p:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   fbTitle:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -24)
   fbTitle:SetText(L.OPT_FEEDBACK_SECTION)
 
-  local cbSound = CheckBox(p, L.OPT_SOUND_ON_ADD, {"TOPLEFT", fbTitle, "BOTTOMLEFT", 0, -8},
-    function() return not (WinterChecklistDB.ui and WinterChecklistDB.ui.soundOnAdd == false) end,
-    function(val) WinterChecklistDB.ui.soundOnAdd = val end
-  )
+  local cbSound = CheckBox(p, L.OPT_SOUND_ON_ADD, { "TOPLEFT", fbTitle, "BOTTOMLEFT", 0, -8 }, function()
+    return not (WinterChecklistDB.ui and WinterChecklistDB.ui.soundOnAdd == false)
+  end, function(val)
+    WinterChecklistDB.ui.soundOnAdd = val
+  end)
 
-  local dd = CreateFrame("Frame", ADDON.."SoundDropdown", p, "UIDropDownMenuTemplate")
+  local dd = CreateFrame("Frame", ADDON .. "SoundDropdown", p, "UIDropDownMenuTemplate")
   dd:SetPoint("TOPLEFT", cbSound, "BOTTOMLEFT", -16, -8)
 
   local selectedName = WinterChecklistDB.ui and WinterChecklistDB.ui.soundName or ""
-  UIDropDownMenu_Initialize(dd, function(self, level)
+  UIDropDownMenu_Initialize(dd, function()
     local info = UIDropDownMenu_CreateInfo()
     info.text = L.OPT_SOUND_NONE
-    info.func = function() selectedName = ""; UIDropDownMenu_SetText(dd, L.OPT_SOUND_NONE); WinterChecklistDB.ui.soundName = "" end
+    info.func = function()
+      selectedName = ""
+      UIDropDownMenu_SetText(dd, L.OPT_SOUND_NONE)
+      WinterChecklistDB.ui.soundName = ""
+    end
     UIDropDownMenu_AddButton(info)
 
     if NS.Media and NS.Media.GetSoundList then
@@ -167,11 +195,11 @@ local function ensurePanel()
   title:SetPoint("TOPLEFT", dd, "BOTTOMLEFT", 16, -24)
   title:SetText(L.OPT_PROFILE_COPY)
 
-  local dd2 = CreateFrame("Frame", ADDON.."CopyFromDropdown", p, "UIDropDownMenuTemplate")
+  local dd2 = CreateFrame("Frame", ADDON .. "CopyFromDropdown", p, "UIDropDownMenuTemplate")
   dd2:SetPoint("TOPLEFT", title, "BOTTOMLEFT", -16, -8)
 
   local fromKey
-  UIDropDownMenu_Initialize(dd2, function(self, level)
+  UIDropDownMenu_Initialize(dd2, function()
     local chars = NS.Tasks and NS.Tasks.ListCharacters and NS.Tasks:ListCharacters() or {}
     for _, key in ipairs(chars) do
       local info = UIDropDownMenu_CreateInfo()
@@ -204,18 +232,25 @@ end
 
 C_Timer.After(0, ensurePanel)
 
-
 -- Add discoverability: register category and add "Open Main Window" button
 local function wcl_add_open_button()
-  if not NS.Options or not NS.Options.panel then return end
+  if not NS.Options or not NS.Options.panel then
+    return
+  end
   local p = NS.Options.panel
-  if p._wclOpenButton then return end
+  if p._wclOpenButton then
+    return
+  end
 
   local btn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
   btn:SetSize(160, 24)
   btn:SetPoint("TOPRIGHT", -24, -24)
-  btn:SetText((NS.L.OPEN_MAIN))
-  btn:SetScript("OnClick", function() if NS.ToggleUI then NS.ToggleUI() end end)
+  btn:SetText(NS.L.OPEN_MAIN)
+  btn:SetScript("OnClick", function()
+    if NS.ToggleUI then
+      NS.ToggleUI()
+    end
+  end)
   p._wclOpenButton = btn
 
   if NS.IsRetail and NS.IsRetail() and Settings and Settings.RegisterAddOnCategory then

@@ -197,7 +197,8 @@ local function CreateMainFrame()
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
   body:SetWidth(WinterChecklistDB.frame.w - 24)
   body:SetJustifyH("LEFT")
-  body:SetText("|cffaaaaaa" .. L.TASKS_HEADER .. " — " .. L.HELP_SUMMARY_BODY .. "|r")
+  body:SetText("|cffaaaaaa" .. L.TASKS_HEADER .. " - " .. L.HELP_SUMMARY_BODY .. "|r")
+  f.bodyText = body
 
   f._contentTopOffset = 64
 
@@ -300,7 +301,13 @@ function NS.NotifyTasksChanged(reason)
   if NS.Debug and type(NS.Debug) == "function" then
     NS:Debug("Tasks changed: " .. (reason or "?"))
   end
-  -- Future: dispatch to listeners if needed
+  local hasUI = NS.UIList and NS.UIList.Refresh and NS.UIList.frame
+  if hasUI then
+    NS.UIList:Refresh()
+  end
+  if NS.EnhanceMinimapText and not hasUI then
+    NS.EnhanceMinimapText()
+  end
 end
 
 -- DB defaults & migration
@@ -371,7 +378,11 @@ function NS.BootstrapUIList()
   if not NS.frame then
     return
   end
+  if NS.frame.bodyText then
+    NS.frame.bodyText:Hide()
+  end
   if NS.UIList and NS.UIList.Init then
     NS.UIList:Init(NS.frame)
   end
 end
+

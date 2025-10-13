@@ -66,3 +66,9 @@ globals = {
   "SLASH_WCLHELLO1",
 }
 ignore = { "631" } -- allow unused loop vars when needed
+
+files = {
+  ["lua/hello.lua"] = {
+    ignore = { "211" }, -- prototype file keeps unused ADDON placeholder
+  },
+}

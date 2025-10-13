@@ -50,3 +50,4 @@ function H:Show(anchorFrame)
   close:SetPoint("TOPRIGHT", 2, 2)
   f:Show()
 end
+

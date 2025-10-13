@@ -116,8 +116,9 @@ A small window labeled **WinterChecklist** appears; drag to move. Zone name upda
 ## Contributing / Local Dev
 
 - Keep all runtime code in `WinterChecklist.lua` while the project is single-file.
-- If adding assets later, ensure they’re covered by the include list in `.tools/build.ps1`.
+- If adding assets later, ensure they're covered by the include list in `.tools/build.ps1`.
 - Avoid flavor-specific APIs in Lua; if necessary, gate by `WOW_PROJECT_ID` checks.
+- Line endings: `.gitattributes` pins `.lua`/`.toc` files to LF. Leave editors on LF so Git stays quiet across platforms.
 
 ---
 

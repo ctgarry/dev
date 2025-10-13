@@ -54,3 +54,4 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     NS:Print("  /wcl import <paste> - Import tasks (omit <paste> to open a popup)")
   end
 end
+

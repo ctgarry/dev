@@ -281,3 +281,4 @@ SlashCmdList.WCLHELLO = function(msg)
     end
   end
 end
+

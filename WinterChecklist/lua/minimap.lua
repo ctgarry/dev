@@ -89,3 +89,4 @@ function NS.ToggleMinimapIcon()
   WinterChecklistDB.minimap.hide = not WinterChecklistDB.minimap.hide
   NS.ApplyMinimapVisibility()
 end
+

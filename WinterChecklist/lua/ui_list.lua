@@ -8,14 +8,14 @@ local U, L = NS.Util, NS.L
 NS.UIList = NS.UIList or {}
 local M = NS.UIList
 
-local ROW_H = 20
+local ROW_H = 24
+local ROW_GAP = 4
 
 -- Layout constants for toolbar
 local EDITW = 260
 local BTN_W = 84
 local DD_W = 128
 local YTOP = 84 -- distance from frame top to toolbar baseline
-local ROWH = 24
 
 local function freqMatch(row, want)
   if want == "all" then
@@ -53,6 +53,9 @@ function M:Init(parent)
   self.frame = f
   f:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, -YTOP)
   f:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -12, 12)
+
+  local scroll = CreateFrame("Frame", nil, f)
+  self.scroll = scroll
 
   local search = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
   search:SetSize(160, 20)
@@ -107,6 +110,7 @@ function M:Init(parent)
       end
     end)
   end)
+  self.btnAdd = btnAdd
 
   local btnClear = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   btnClear:SetSize(60, 20)
@@ -117,8 +121,8 @@ function M:Init(parent)
       NS.Tasks:Clear()
       M:Refresh()
     end)
-    self.btnClear = btnClear
   end)
+  self.btnClear = btnClear
 
   local btnImport = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   btnImport:SetSize(60, 20)
@@ -130,8 +134,8 @@ function M:Init(parent)
         NS.Tasks:ImportWithPrompt(s)
       end
     end)
-    self.btnImport = btnImport
   end)
+  self.btnImport = btnImport
 
   local btnExport = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   btnExport:SetSize(60, 20)
@@ -164,33 +168,32 @@ function M:Init(parent)
   end
 
   -- Hook layout on resize/show
+  if M.Layout then
+    M:Layout(parent)
+  end
   if not self._sizeHooked then
     parent:HookScript("OnSizeChanged", function()
       if M.Layout then
         M:Layout(parent)
+      end
+      if M.Refresh then
+        M:Refresh()
       end
     end)
     f:HookScript("OnShow", function()
       if M.Layout then
         M:Layout(parent)
       end
+      if M.Refresh then
+        M:Refresh()
+      end
     end)
     self._sizeHooked = true
   end
 
-  -- initial layout
-  if M.Layout then
-    M:Layout(parent)
-  end
-
-  -- Scroll area ----------------------------------------------------------------
-  local scroll = CreateFrame("Frame", nil, f)
-  -- points set in Layout
-  self.scroll = scroll
-
   -- Empty state text
-  self.emptyText = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  self.emptyText:SetText(L.EMPTY_STATE or "No tasks yet — click Add, or type: /wcl add <task>")
+  self.emptyText = scroll:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  self.emptyText:SetText(L.EMPTY_STATE or "No tasks yet - click Add, or type: /wcl add <task>")
   self.emptyText:Hide()
 
   self.rows = {}
@@ -203,13 +206,11 @@ local function ensureRow(i, parent)
     return row
   end
   row = CreateFrame("Frame", nil, parent)
-  row:SetSize(parent:GetWidth(), ROW_H)
+  row:SetHeight(ROW_H)
   row.chk = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
   row.chk:SetPoint("LEFT", 0, 0)
-  row.txt = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-  row.txt:SetPoint("LEFT", row.chk, "RIGHT", 4, 0)
-  row.txt:SetJustifyH("LEFT")
-  row.txt:SetWidth(parent:GetWidth() - 180)
+  row.chk:SetSize(24, 24)
+  row.chk:SetHitRectInsets(0, -6, 0, 0)
 
   -- Right-side controls: Up / Down / Edit / Delete
   local function mkBtn(width)
@@ -217,18 +218,27 @@ local function ensureRow(i, parent)
     b:SetSize(width, ROW_H - 6)
     return b
   end
-  row.btnUp = mkBtn(24)
-  row.btnUp:SetPoint("RIGHT", -96, 0)
-  row.btnUp:SetText("↑")
-  row.btnDown = mkBtn(24)
-  row.btnDown:SetPoint("RIGHT", -68, 0)
-  row.btnDown:SetText("↓")
-  row.btnEdit = mkBtn(36)
-  row.btnEdit:SetPoint("RIGHT", -36, 0)
+  row.btnDel = mkBtn(32)
+  row.btnDel:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+  row.btnDel:SetText(L.DELETE_SHORT or "X")
+
+  row.btnEdit = mkBtn(48)
+  row.btnEdit:SetPoint("RIGHT", row.btnDel, "LEFT", -6, 0)
   row.btnEdit:SetText(L.EDIT or "Edit")
-  row.btnDel = mkBtn(28)
-  row.btnDel:SetPoint("RIGHT", -4, 0)
-  row.btnDel:SetText("✕")
+
+  row.btnDown = mkBtn(40)
+  row.btnDown:SetPoint("RIGHT", row.btnEdit, "LEFT", -6, 0)
+  row.btnDown:SetText(L.MOVE_DOWN or "Down")
+
+  row.btnUp = mkBtn(40)
+  row.btnUp:SetPoint("RIGHT", row.btnDown, "LEFT", -6, 0)
+  row.btnUp:SetText(L.MOVE_UP or "Up")
+
+  row.txt = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+  row.txt:SetPoint("LEFT", row.chk, "RIGHT", 6, 0)
+  row.txt:SetPoint("RIGHT", row.btnUp, "LEFT", -8, 0)
+  row.txt:SetJustifyH("LEFT")
+  row.txt:SetWordWrap(false)
 
   M.rows[i] = row
   return row
@@ -256,7 +266,9 @@ function M:Refresh()
       local r = ensureRow(idx, self.scroll)
       r:ClearAllPoints()
       r:SetPoint("TOPLEFT", self.scroll, "TOPLEFT", 0, y)
-      y = y - ROW_H - 2
+      r:SetPoint("TOPRIGHT", self.scroll, "TOPRIGHT", 0, y)
+      r:SetHeight(ROW_H)
+      y = y - (ROW_H + ROW_GAP)
       r:Show()
       self.visibleCount = self.visibleCount + 1
 
@@ -320,6 +332,10 @@ function M:Layout(parent)
     return
   end
   local f = self.frame
+  local frameWidth = f:GetWidth()
+  if not frameWidth or frameWidth <= 0 then
+    return
+  end
 
   local function reset(w)
     if w and w.ClearAllPoints then
@@ -343,7 +359,7 @@ function M:Layout(parent)
   -- left: search
   if self.search then
     self.search:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
-    self.search:SetHeight(ROWH)
+    self.search:SetHeight(ROW_H)
     x = EDITW + 8
   end
 
@@ -363,12 +379,12 @@ function M:Layout(parent)
   end
 
   -- right cluster: Add, Clear, Import, Export (right-aligned)
-  local rightX = f:GetWidth() - 4
+  local rightX = frameWidth - 4
   local function placeRight(btn)
     if not btn then
       return
     end
-    btn:SetHeight(ROWH)
+    btn:SetHeight(ROW_H)
     btn:ClearAllPoints()
     rightX = rightX - btn:GetWidth()
     btn:SetPoint("TOPLEFT", f, "TOPLEFT", rightX, 0)
@@ -381,9 +397,14 @@ function M:Layout(parent)
 
   -- scroll fills remaining
   if self.scroll then
-    self.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -(ROWH + 8))
-    self.scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -(ROWH + 8))
+    self.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -(ROW_H + 8))
+    self.scroll:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -(ROW_H + 8))
     self.scroll:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
     self.scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
   end
+
+  if self.emptyText then
+    self.emptyText:SetWidth(frameWidth - 16)
+  end
 end
+

@@ -2,7 +2,7 @@
   @file    lua/utils.lua
   @brief   Small, dependency-free helpers used across modules.
 ]]
-local ADDON, NS = ...
+local _, NS = ...
 NS.Util = NS.Util or {}
 local U = NS.Util
 
@@ -112,3 +112,4 @@ function U.ClampToScreen(frame)
     frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (frame:GetLeft() or 0) + offX, (frame:GetTop() or 0) + offY)
   end
 end
+

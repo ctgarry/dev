@@ -2,10 +2,10 @@
   @file    local/enUS.lua
   @brief   American English strings. Missing keys fall back to key name.
 ]]
-local ADDON, NS = ...
+local _, NS = ...
 local L = {}
 NS.L = setmetatable(L, {
-  __index = function(t, k)
+  __index = function(_, k)
     return k
   end,
 })

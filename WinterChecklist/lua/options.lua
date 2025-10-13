@@ -261,3 +261,4 @@ local function wcl_add_open_button()
 end
 
 C_Timer.After(0.25, wcl_add_open_button)
+

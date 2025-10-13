@@ -1,3 +1,228 @@
+# WinterChecklist — Technical Notes (Living Document)
+
+_Last updated: 2025-10-13 07:57_
+
+This living document is a practical companion for developing and maintaining **WinterChecklist**. 
+It flows from environment setup to daily workflows, design practices, and quick reference. 
+It **does not duplicate** the following specialized docs; consult them alongside this file:
+
+- **BUGS.md** — Source of truth for known issues and UX items.
+- **Codex_Bootstrap_Checklist.md** — Minimal steps for bringing Codex online.
+- **DEV_NOTES_Codex.md** — Guardrails and working agreements for Codex-driven edits.
+
+
+## Environment & Tooling
+
+**Workspace-local tools.** Place binaries you rely on under `.tools\bin` and put that ahead of PATH in VS Code:
+
+```json
+{
+  "terminal.integrated.env.windows": {
+    "PATH": "${workspaceFolder}\\.tools\\bin;${env:PATH}"
+  }
+}
+```
+
+**External Lua toolchain (no repo clutter).** Keep Lua/LuaRocks/luacheck out of the repo using a per-user toolchain, e.g. `%LOCALAPPDATA%\hererocks\wcl54`. Optionally add a wrapper script at `.tools\bin\luacheck.bat`:
+
+```bat
+@"%LOCALAPPDATA%\hererocks\wcl54\bin\luacheck.bat" %*
+```
+
+**Avoid sync-lock pain.** While actively editing with Codex, pause Dropbox/OneDrive for this repo or work outside the sync folder and copy back.
+
+## Formatting & Linting
+
+**Formatter — StyLua**  
+Run:
+```powershell
+.\.tools\bin\stylua .
+```
+Sample config (`.stylua.toml`):
+```toml
+column_width = 120
+indent_type = "Spaces"
+indent_width = 2
+quote_style = "AutoPreferDouble"
+```
+
+**Linter — Luacheck**  
+Run:
+```powershell
+luacheck . --codes --exclude-files "lib/**"
+```
+Sample config (`.luacheckrc`):
+```lua
+std = "lua54"
+globals = { "CreateFrame","LibStub","GetLocale","C_AddOns","GameTooltip","SlashCmdList","WinterChecklist" }
+exclude_files = { "lib/**" }
+codes = { "111","112","113","121","122","211","212","213","214" }
+```
+
+**VS Code Tasks** (`.vscode/tasks.json`):
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "fmt:stylua", "type": "shell", "command": ".\\.tools\\bin\\stylua ." },
+    { "label": "lint:luacheck", "type": "shell", "command": "luacheck . --codes --exclude-files \"lib/**\"" },
+    { "label": "fmt+lint", "dependsOn": ["fmt:stylua","lint:luacheck"], "dependsOrder": "sequence" }
+  ]
+}
+```
+
+## Working with Codex (use it, don’t fight it)
+
+- Keep asks **small and single-step** (e.g., “run this one command and paste stdout only”).  
+- If a session misbehaves: start a **New Task**; if still odd, **Developer: Reload Window**.  
+- Use **DEV_NOTES_Codex.md** for guardrails and **Codex_Bootstrap_Checklist.md** for one-time setup.
+
+**Micro-prompts (safe):**
+- Lint only: `Run exactly: luacheck . --codes --exclude-files "lib/**". Paste stdout only.`
+- Format only: `Run exactly: .\\.tools\\bin\\stylua .`
+
+## Packaging a Clean Zip
+
+Create `tools\pack.ps1` to produce a distributable that excludes dev files and write a VS Code task to call it. 
+(If you want, we can embed the script here or keep it referenced to avoid duplication with README.)
+
+## Lua Practices & Patterns (WinterChecklist)
+
+- **Keep slash commands isolated** in `lua/slash.lua`, not in `WinterChecklist.lua`.
+- **Prefer early guards** (e.g., `if not name or name=="" then return end`) to avoid nil churn.
+- **Use the namespace table (`NS`)** to share state; avoid `_G` pollution.
+- **Don’t mutate arrays while iterating with `ipairs`**; if removing items, use a numeric loop backwards.
+- **Colon vs dot**: `:` defines/calls methods with implicit `self`; `.` for plain functions.
+
+## Quick Reference
+
+**What is linting?** Static analysis that flags likely bugs and bad patterns before runtime. We use **luacheck**.  
+**Formatter vs Linter?** Formatter (StyLua) rewrites layout; Linter (Luacheck) reports issues.  
+**Why vendored tools?** Reliability. Codex and VS Code always find them regardless of system installs.
+
+## Pointers to Other Docs (no duplication)
+
+- **BUGS.md** — The canonical list of issues and UX polish items.
+- **Codex_Bootstrap_Checklist.md** — Minimal steps and verification for Codex.
+- **DEV_NOTES_Codex.md** — How we expect Codex to behave (approvals, scope, diffs).
+- **README.md** — High-level intro and packaging basics.
+
+## Future Additions
+
+- Lua crib sheet (tables, metatables, events, taint basics) with small, runnable snippets.  
+- Retail vs Classic shim matrix (frames, minimap, LDB, SavedVariables).  
+- “First Contribution” flow (fmt → lint → small patch → test → pack).  
+- Codex micro-prompts gallery (single-step commands + apply-diff pattern).  
+- Troubleshooting appendix (common addon errors and their fixes).
+
+## Project Notes (curated extract)
+
+The following is a lightly cleaned extract from the current `NOTES.md`. 
+It’s preserved here to keep this document self-contained while the specialized docs remain separate.
+
+
+# WinterChecklist — Unified Notes & Q&A (Retired Thread Consolidation)
+
+_Last updated: 2025-10-13 07:51_
+
+This document consolidates the recent development thread into a **succinct, numbered reference** and merges it with the current project notes.
+It avoids repeating content that already lives in **DEV_NOTES_Codex.md** (guardrails) and **Codex_Bootstrap_Checklist.md** (workflow), and it leaves **BUGS.md** as the authoritative bug log.
+
+---
+
+## 1. Purpose & Scope
+- Serve as a **quick reference** for everyday work on WinterChecklist (Classic-first; Retail via shims).
+- Capture reliable **env/tooling** steps and **Lua tips** discussed in the thread.
+- **Do not** duplicate guardrails or bootstrap steps: see `DEV_NOTES_Codex.md` and `Codex_Bootstrap_Checklist.md` for those details.
+
+## 2. Environment & Tooling (Windows + VS Code)
+- **Vendored tools** in repo (predictable and fast):
+  - Put binaries in `.tools\bin` and prefer workspace-local PATH.
+  - VS Code: `.vscode/settings.json`
+    ```json
+    {
+      "terminal.integrated.env.windows": {
+        "PATH": "${workspaceFolder}\\.tools\\bin;${env:PATH}"
+      }
+    }
+    ```
+- **External Lua toolchain (no repo clutter)** via Hererocks:
+  - Install to user space (example): `%LOCALAPPDATA%\hererocks\wcl54`
+  - Optional wrapper in `.tools\bin\luacheck.bat` → `@"%LOCALAPPDATA%\hererocks\wcl54\bin\luacheck.bat" %*`
+- Keep the working copy outside active sync during edits (or pause Dropbox/OneDrive) to avoid file locks with Codex.
+
+## 3. Formatting & Linting
+- **Format (Stylua):**
+  ```powershell
+  .\.tools\bin\stylua .
+  ```
+  `./.stylua.toml` (example):
+  ```toml
+  column_width = 120
+  indent_type = "Spaces"
+  indent_width = 2
+  quote_style = "AutoPreferDouble"
+  ```
+- **Lint (Luacheck):**
+  ```powershell
+  luacheck . --codes --exclude-files "lib/**"
+  ```
+  `./.luacheckrc` (example):
+  ```lua
+  std = "lua54"
+  globals = ('CreateFrame', 'LibStub', 'GetLocale', 'C_AddOns', 'GameTooltip', 'SlashCmdList', 'WinterChecklist')
+  exclude_files = { "lib/**" }
+  codes = { "111","112","113","121","122","211","212","213","214" }
+  ```
+- **VS Code Tasks** (`.vscode/tasks.json`):
+  ```json
+  {
+    "version": "2.0.0",
+    "tasks": [
+      { "label": "fmt:stylua", "type": "shell", "command": ".\\.tools\\bin\\stylua ." },
+      { "label": "lint:luacheck", "type": "shell", "command": "luacheck . --codes --exclude-files \"lib/**\"" },
+      { "label": "fmt+lint", "dependsOn": ["fmt:stylua","lint:luacheck"], "dependsOrder": "sequence" }
+    ]
+  }
+  ```
+
+## 4. Codex in VS Code (Use Carefully)
+- Prefer **small, single-step asks** (avoid multi-file plans).
+- If a session misbehaves: **New Task** → if needed, **Developer: Reload Window**.
+- Reference docs (do not duplicate here):
+  - **Guardrails:** `DEV_NOTES_Codex.md`
+  - **Bootstrap:** `Codex_Bootstrap_Checklist.md`
+- **Micro-prompts** (safe):
+  - Lint only: `Run exactly: luacheck . --codes --exclude-files "lib/**". Paste stdout only.`
+  - Format only: `Run exactly: .\\.tools\\bin\\stylua .`
+
+## 5. Packaging a Clean Zip
+Create `tools\pack.ps1` and a VS Code task to produce a distributable that excludes dev files. (See this doc’s earlier thread steps.)
+
+## 6. Lua Tips & Q&A
+- **`ipairs` index vs value:**
+  - `for i, row in ipairs(t) do` → need index.
+  - `for _, row in ipairs(t) do` → ignore index (use `_`).
+- **Don’t mutate arrays during `ipairs`**; use a numeric `for` backwards if removing items.
+- **Slash commands stay in `lua/slash.lua`**, not in `WinterChecklist.lua`.
+- **Early guards** help avoid nil errors: `if not name or name=="" then return nil end`.
+- **Namespaces**: use the shared `NS` table; avoid leaking globals.
+
+## 7. Where to Find Things (avoid duplication)
+- **Guardrails / workflow** → `DEV_NOTES_Codex.md`, `Codex_Bootstrap_Checklist.md`.
+- **Open bugs & UX work** → `BUGS.md` (source of truth).
+- **Readme** → `README.md` for high-level intro and packaging basics.
+
+## 8. Ideas to Add Later
+- “Lua patterns” crib sheet: tables, metatables, events, secure/taint basics.
+- Retail vs Classic shim matrix (frames, minimap, LDB, SavedVariables).
+- “First Contribution” guide: fmt → lint → patch → test → pack.
+- Codex micro-prompts gallery (single-step commands + apply-diff flow).
+- Troubleshooting appendix (common addon errors and fixes).
+
+---
+
+## Appendix A — Current Project NOTES (lightly cleaned)
 # Lua Notes — Core Concepts (from WinterChecklist exploration)
 
 These notes summarize key Lua behaviors and conventions you’ve encountered while reading through **WinterChecklist.lua**.
@@ -82,7 +307,7 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
 
 ## 8. How locals survive past a `do ... end`
 
-- When a `do ... end` block finishes, **the names** of any locals go out of scope,  
+- When a `do ... end` block finishes, **the names** of any locals go out of scope,
   but **the values** they referred to remain alive if something still references them.
 
 - Example:
@@ -99,13 +324,13 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
   Here:
   - `tcopy` is a local variable holding a function.
   - `NS.table_copy = tcopy` assigns that same function to `NS.table_copy`.
-  - When the block ends, the *name* `tcopy` vanishes,  
+  - When the block ends, the *name* `tcopy` vanishes,
     but the *function value* remains alive because `NS.table_copy` still points to it.
 
-- Inside `tcopy`, recursive calls (`tcopy(dst[k], v)`) work because Lua keeps an  
+- Inside `tcopy`, recursive calls (`tcopy(dst[k], v)`) work because Lua keeps an
   **upvalue** reference to the original local function.
 
-- This is how Lua modules “export” functions safely:  
+- This is how Lua modules “export” functions safely:
   private locals inside a `do ... end`, public handles via `NS.*`.
 
 ---
@@ -113,7 +338,7 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
 ## 9. Some propmts
   - Assume that I have used your three new files word for word. Move all code from winterchecklist.lua having to do with the minimap button into a new file minimap.lua. Do this revision in the same way as you just did the previous revision -- making sure all four files work well together (utils, slash, minimap and winterchecklist) and note the order I should give in the TOC for them. Provide the new files as downloads only, do not display them.
 
-  - You are a seasoned World of Warcraft LUA developer with thousands of successful addons to your credit and a desire to teach the world your skills. Assume that I have taken all those files from the last result word for word. Now use those to please review all LUA files (not lib/) and check for 
+  - You are a seasoned World of Warcraft LUA developer with thousands of successful addons to your credit and a desire to teach the world your skills. Assume that I have taken all those files from the last result word for word. Now use those to please review all LUA files (not lib/) and check for
     • inconsistencies
     • magic numbers that should be declared at the beginning
     • localization that should be handled
@@ -121,16 +346,16 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
     • top-of-file descriptors that should be revised or added
     • modest comments that should be added for longer sections of code that don't seem to have any
     • namespace or leaky globals
-    • other good practices that keep lean, durable code. 
+    • other good practices that keep lean, durable code.
     • good reliance on the 4 lib files we've imported
     • consideration of any other lib files we should import, based on the product direction we are going
   - Complete these recommendations by integrating them into the files you just provided in the last result and but before you link them again as downloadable files, think one more time and be sure we're not missing a better approach.
   - Think about what kind of Checklist features are possible for tasks and activities in a Classic Era Wow addon. What are we missing that someone else might have that we could actually do better! Should there be categories? Drilldowns? Preset libraries? in-frame task list UI (with add/remove/clear + import/export buttons) ?
 
   - Please note the following
-    • As before, you are an experienced LUA developer with billions of successful addons to your credit. 
-    • Please use a fresh view of 009 zip direct from project files, produce milestone A by merging sensibly the proposed code changes with files from the existing zip. 
-    • Before committing to the change, pause and think again about all the changes, ask me at least three clarifying questions that might make the release even better. Make sure that you have not dropped any features; avoid over-coding; support classic_era primarily with extensibility to retail; make sure that this leads sensibly to Milestone B. 
+    • As before, you are an experienced LUA developer with billions of successful addons to your credit.
+    • Please use a fresh view of 009 zip direct from project files, produce milestone A by merging sensibly the proposed code changes with files from the existing zip.
+    • Before committing to the change, pause and think again about all the changes, ask me at least three clarifying questions that might make the release even better. Make sure that you have not dropped any features; avoid over-coding; support classic_era primarily with extensibility to retail; make sure that this leads sensibly to Milestone B.
     • Finally provide the new files in a downloadable link (don't display actual code since we don't want to fill up the browser).
     • Provide a high level overview. Note any recommended changes to the scope of Milestone B.
 
@@ -138,7 +363,7 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
 
     - List anatomy: do you want flat tasks first (single list) or top-level categories + tasks right away? (I can keep Milestone A flat and visually group later, or seed simple categories now so B is a pure UI step.)
     - Flat lists are simpler to implement and use initially, making for a faster Milestone A, while categories + tasks provide better organization and scalability but require more UI and logic upfront.
-    - Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?  
+    - Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?
     - (Note: Account-wide persistence requires a different SavedVariables structure and may involve migration logic if switching from per-character to account-wide storage. Please specify if you want to support both modes or just one for now.)
     - Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?
     - Import/Export default: when a user imports without a category, should it replace the current list (simple, but risks accidental data loss) or merge (smarter, avoids accidental wipes but may cause clutter)?
@@ -160,7 +385,7 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
   - Sync cycle: For remotes, git fetch + git pull --rebase before starting, git push after review/testing.
   - Housekeeping: Clean temp files before committing; keep .gitignore updated. Tag releases with git tag when ready to package.
   - Recovery: If something goes wrong, use git stash, git commit --amend, or new branches instead of destructive resets.
-  
+
 ## 11. BLizzard Global Namespace
 
   - Think of _G as Lua’s global environment table. In WoW, Blizzard populates _G with every API object, frame, and constant before your addon runs. So when you write local UIParent = _G.UIParent, you’re pulling the value Blizzard registered into that table. Conceptually it’s the shared “global namespace” rather than a special Blizzard object—Lua simply treats all globals as keys on _G, and Blizzard uses that to expose its API.
@@ -214,6 +439,3 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
 ## 14. Other task list addons
   These are wonderful inspirations:
   - https://www.curseforge.com/wow/addons/nys-todolist
-   
-
-

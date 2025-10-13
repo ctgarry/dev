@@ -211,3 +211,13 @@ _These fundamentals cover 90% of the Lua behavior you’ll meet when building or
     Use this tiny diagnostic ask (it’s safe and quick):
       - Print the absolute current working directory with pwd (PowerShell). Paste only the path. Do not do anything else.
     If that returns instantly, follow with the single luacheck command above.
+
+## 13. Instructions to Codex for how to work on this project
+
+  - Please start working incrementally with the bug list, while protecting your memory usage against Codex crashes or freezes, and ping me for approvals only as required.
+
+## 14. Other task list addons
+   - https://www.curseforge.com/wow/addons/nys-todolist
+   
+
+

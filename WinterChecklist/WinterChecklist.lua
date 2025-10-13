@@ -38,6 +38,10 @@ WinterChecklistDB = WinterChecklistDB or {}
 -- Constants -------------------------------------------------------------------
 C.FRAME_W_DEFAULT = 420
 C.FRAME_H_DEFAULT = 320
+C.FRAME_W_MIN = 320
+C.FRAME_H_MIN = 220
+C.FRAME_W_MAX = 720
+C.FRAME_H_MAX = 520
 C.HELP_BTN_W = 24
 C.HELP_BTN_H = 20
 C.TITLE_MARGIN_X = 12
@@ -138,6 +142,41 @@ local function store_position(frame, conf)
   conf.point, conf.relPoint, conf.x, conf.y = p or "CENTER", rp or "CENTER", x or 0, y or 0
 end
 
+local function apply_resize_bounds(frame)
+  if not frame then
+    return
+  end
+  frame._minSize = { C.FRAME_W_MIN, C.FRAME_H_MIN }
+  frame._maxSize = { C.FRAME_W_MAX, C.FRAME_H_MAX }
+  if frame.SetResizeBounds then
+    frame:SetResizeBounds(C.FRAME_W_MIN, C.FRAME_H_MIN, C.FRAME_W_MAX, C.FRAME_H_MAX)
+  else
+    if frame.SetMinResize then
+      frame:SetMinResize(C.FRAME_W_MIN, C.FRAME_H_MIN)
+    end
+    if frame.SetMaxResize then
+      frame:SetMaxResize(C.FRAME_W_MAX, C.FRAME_H_MAX)
+    end
+  end
+end
+
+local function clamp_resize(frame, width, height)
+  if not frame then
+    return width, height
+  end
+  local minSize = frame._minSize
+  local maxSize = frame._maxSize
+  if minSize then
+    width = math.max(width, minSize[1])
+    height = math.max(height, minSize[2])
+  end
+  if maxSize then
+    width = math.min(width, maxSize[1])
+    height = math.min(height, maxSize[2])
+  end
+  return width, height
+end
+
 -- Logging
 function NS.Print(_, msg)
   if msg == nil then
@@ -159,6 +198,10 @@ local function CreateMainFrame()
   local f = CreateFrame("Frame", ADDON .. "MainFrame", UIParent, "BackdropTemplate")
   f:SetSize(WinterChecklistDB.frame.w, WinterChecklistDB.frame.h)
   f:SetBackdrop(C.BACKDROP)
+  if f.SetResizable then
+    f:SetResizable(true)
+  end
+  apply_resize_bounds(f)
   restore_position(f)
 
   -- Dragging (respects the 'locked' option)
@@ -183,7 +226,7 @@ local function CreateMainFrame()
   -- Help button
   local helpBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   helpBtn:SetSize(C.HELP_BTN_W, C.HELP_BTN_H)
-  helpBtn:SetPoint("TOPRIGHT", -8, -8)
+  helpBtn:SetPoint("TOPRIGHT", -32, -8)
   helpBtn:SetText("?")
   helpBtn:SetScript("OnClick", function()
     if NS.Help then
@@ -200,11 +243,55 @@ local function CreateMainFrame()
   body:SetText("|cffaaaaaa" .. L.TASKS_HEADER .. " - " .. L.HELP_SUMMARY_BODY .. "|r")
   f.bodyText = body
 
-  f._contentTopOffset = 64
+  f._contentTopOffset = 48
 
   -- Close
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", 0, 0)
+
+  local resize = CreateFrame("Button", nil, f)
+  resize:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 6)
+  resize:SetSize(16, 16)
+  resize:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+  resize:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+  resize:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+  resize:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" and self:GetParent().StartSizing then
+      self:GetParent():StartSizing("BOTTOMRIGHT")
+    end
+  end)
+  resize:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then
+      local parent = self:GetParent()
+      if parent.StopMovingOrSizing then
+        parent:StopMovingOrSizing()
+      end
+      local w, h = parent:GetWidth(), parent:GetHeight()
+      local clampedW, clampedH = clamp_resize(parent, w, h)
+      if clampedW ~= w or clampedH ~= h then
+        parent:SetSize(clampedW, clampedH)
+      end
+      WinterChecklistDB.frame.w = clampedW
+      WinterChecklistDB.frame.h = clampedH
+      store_position(parent)
+      if parent._OnFrameSized then
+        parent:_OnFrameSized()
+      end
+    end
+  end)
+
+  f:SetScript("OnSizeChanged", function(self, width, height)
+    local clampedW, clampedH = clamp_resize(self, width, height)
+    if clampedW ~= width or clampedH ~= height then
+      self:SetSize(clampedW, clampedH)
+      width, height = clampedW, clampedH
+    end
+    WinterChecklistDB.frame.w = width
+    WinterChecklistDB.frame.h = height
+    if self._OnFrameSized then
+      self:_OnFrameSized()
+    end
+  end)
 
   NS.frame = f
   if WinterChecklistDB.frame.shown then
@@ -385,4 +472,3 @@ function NS.BootstrapUIList()
     NS.UIList:Init(NS.frame)
   end
 end
-

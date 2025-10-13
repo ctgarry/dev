@@ -14,6 +14,7 @@ A clean-slate, single-file World of Warcraft addon scaffold that targets **Retai
 ## Features
 
 - Movable/clamped UI frame with saved position
+- Resizable main window with filter/search bar and footer actions (Add/Import/Export)
 - Zone-aware label (updates on zone/subzone change)
 - Slash commands: `/wcl`, `/wcl show`, `/wcl hide`, `/wcl reset`, `/wcl debug`, `/wcl export`, `/wcl import <table>`
 - Lightweight Lua serializer/deserializer (safe env)

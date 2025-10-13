@@ -86,6 +86,33 @@ function U.ShowTextPopup(title, text, onAccept)
   StaticPopup_Show("WCL_TEXT_POPUP")
 end
 
+-- Simple yes/no confirm dialog ------------------------------------------------
+function U.Confirm(text, yesLabel, noLabel, onAccept, onCancel)
+  if not StaticPopupDialogs then
+    StaticPopupDialogs = {}
+  end
+  StaticPopupDialogs["WCL_CONFIRM_POPUP"] = {
+    text = text or "Confirm?",
+    button1 = yesLabel or (NS.L and NS.L.YES) or "Yes",
+    button2 = noLabel or (NS.L and NS.L.NO) or "No",
+    OnAccept = function()
+      if onAccept then
+        onAccept()
+      end
+    end,
+    OnCancel = function()
+      if onCancel then
+        onCancel()
+      end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+  }
+  StaticPopup_Show("WCL_CONFIRM_POPUP")
+end
+
 function U.ClampToScreen(frame)
   if not frame then
     return
@@ -112,4 +139,3 @@ function U.ClampToScreen(frame)
     frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (frame:GetLeft() or 0) + offX, (frame:GetTop() or 0) + offY)
   end
 end
-

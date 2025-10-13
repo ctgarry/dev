@@ -127,7 +127,7 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
   - Complete these recommendations by integrating them into the files you just provided in the last result and but before you link them again as downloadable files, think one more time and be sure we're not missing a better approach.
   - Think about what kind of Checklist features are possible for tasks and activities in a Classic Era Wow addon. What are we missing that someone else might have that we could actually do better! Should there be categories? Drilldowns? Preset libraries? in-frame task list UI (with add/remove/clear + import/export buttons) ?
 
-  - 
+  - Please note the following
     • As before, you are an experienced LUA developer with billions of successful addons to your credit. 
     • Please use a fresh view of 009 zip direct from project files, produce milestone A by merging sensibly the proposed code changes with files from the existing zip. 
     • Before committing to the change, pause and think again about all the changes, ask me at least three clarifying questions that might make the release even better. Make sure that you have not dropped any features; avoid over-coding; support classic_era primarily with extensibility to retail; make sure that this leads sensibly to Milestone B. 

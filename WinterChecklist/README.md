@@ -1,23 +1,24 @@
 # WinterChecklist
 
-A clean-slate, single-file World of Warcraft addon scaffold that targets **Retail** and **Classic Era** from one repo using flavor-specific TOCs and VS Code tasks.
+A clean-slate, modular World of Warcraft addon scaffold that targets **Retail** and **Classic Era** from one repo using flavor-specific TOCs and VS Code tasks.
 
-- **Single Lua file** (`WinterChecklist.lua`)
+- **Modular Lua stack** (`WinterChecklist.lua` bootstrap + `lua/` modules for UI, tasks, slash commands, minimap, options)
 - **Dual TOCs** (`WinterChecklist_Mainline.toc` for Retail, `WinterChecklist_Vanilla.toc` for Classic Era)
-- **Zero taint**, strict namespacing, safe event router
+- **Bundled libraries** via `lib/` (LibStub, LibDataBroker, LibDBIcon, LibSharedMedia) with strict namespacing to stay taint-free
 - **VS Code tasks** to zip for CurseForge and install directly into live AddOns folders
+- **Developer docs** under `.tools/notes/` (technical guide, bug log, Codex guardrails, bootstrap checklist)
 
-> Status: early scaffold. Features will expand incrementally (minimap button, snapshots, import/export schema, etc.).
+> Status: active alpha. Core UI, minimap integration, import/export, and profile tooling are in place; polish and content are evolving.
 
 ---
 
 ## Features
 
-- Movable/clamped UI frame with saved position
-- Resizable main window with filter/search bar and footer actions (Add/Import/Export)
-- Zone-aware label (updates on zone/subzone change)
-- Slash commands: `/wcl`, `/wcl show`, `/wcl hide`, `/wcl reset`, `/wcl debug`, `/wcl export`, `/wcl import <table>`
-- Lightweight Lua serializer/deserializer (safe env)
+- Movable, resizable UI frame with saved position, scrollable task list, search, frequency filter, and footer actions (Add / Import / Export / Clear)
+- Inline help overlay and zone-aware header so tasks stay contextual while you travel
+- Minimap icon (LibDBIcon) plus options panel toggles for account-wide mode, locking the UI, showing help, and sound feedback on task add
+- Account-wide or per-character task storage with character copy tools, safe import/export serializer, and reorderable rows
+- Slash commands: `/wcl`, `/wcl toggle`, `/wcl options`, `/wcl minimap`, `/wcl debug`, `/wcl export`, `/wcl import`, `/wcl help`
 
 ---
 
@@ -27,12 +28,26 @@ A clean-slate, single-file World of Warcraft addon scaffold that targets **Retai
 WinterChecklist.lua
 WinterChecklist_Mainline.toc     # Retail
 WinterChecklist_Vanilla.toc      # Classic Era
+lua/                             # UI, tasks, minimap, slash, utils modules
+local/
+  enUS.lua                       # localization strings
+lib/                             # bundled libs (LibStub, LDB, DBIcon, LSM)
 .tools/
   build.ps1                      # build/install script (PowerShell)
+  notes/                         # developer guides, bug log, guardrails
 .vscode/
   tasks.json                     # VS Code tasks (zip/install)
 .dist/                           # output zips (generated)
 ```
+
+---
+
+## Developer Notes & Guides
+
+- `.tools/notes/WinterChecklist-Technical-Notes.md` - living technical guide for building and maintaining the addon
+- `.tools/notes/DEV_NOTES_Codex.md` - guardrails, coding standards, and workflow expectations
+- `.tools/notes/Codex_Bootstrap_Checklist.md` - repeatable bootstrap steps for a clean Codex workspace
+- `.tools/notes/BUGS.md` - running bug and observation log with status checkpoints
 
 ---
 
@@ -45,10 +60,10 @@ WinterChecklist_Vanilla.toc      # Classic Era
 ### VS Code Tasks
 Open the repo in VS Code and run:
 
-- **Zip: Retail → CurseForge** – makes `.dist/WinterChecklist-<version>-Retail.zip`
-- **Zip: Classic Era → CurseForge** – makes `.dist/WinterChecklist-<version>-ClassicEra.zip`
-- **Install: Retail (live AddOns)** – copies files into `…\_retail_\Interface\AddOns\WinterChecklist\`
-- **Install: Classic Era (live AddOns)** – copies files into `…\_classic_era_\Interface\AddOns\WinterChecklist\`
+- **Zip: Retail -> CurseForge** - makes `.dist/WinterChecklist-<version>-Retail.zip`
+- **Zip: Classic Era -> CurseForge** - makes `.dist/WinterChecklist-<version>-ClassicEra.zip`
+- **Install: Retail (live AddOns)** - copies files into `.\_retail_\Interface\AddOns\WinterChecklist\`
+- **Install: Classic Era (live AddOns)** - copies files into `.\_classic_era_\Interface\AddOns\WinterChecklist\`
 
 > Tasks call `.tools/build.ps1` which:
 > - Picks the correct TOC for the flavor
@@ -92,13 +107,14 @@ The build script copies only the chosen TOC and writes it out as `WinterChecklis
 
 Open chat and use:
 ```
-/wc
-/wc show
-/wc hide
-/wc reset
-/wc debug
-/wc export
-/wc import {some_table_here}
+/wcl
+/wcl toggle
+/wcl options
+/wcl minimap
+/wcl debug
+/wcl export
+/wcl import <paste or leave empty for popup>
+/wcl help
 ```
 
 A small window labeled **WinterChecklist** appears; drag to move. Zone name updates as you travel.
@@ -108,7 +124,7 @@ A small window labeled **WinterChecklist** appears; drag to move. Zone name upda
 ## Releasing to CurseForge
 
 1. Bump `## Version:` in the target TOC(s).
-2. Run the **Zip** task for the flavor you’re publishing.
+2. Run the **Zip** task for the flavor you're publishing.
 3. Upload the generated zip from `.dist/`.
 4. Fill out changelog & set the correct game flavor on CurseForge.
 
@@ -116,7 +132,9 @@ A small window labeled **WinterChecklist** appears; drag to move. Zone name upda
 
 ## Contributing / Local Dev
 
-- Keep all runtime code in `WinterChecklist.lua` while the project is single-file.
+- Keep `WinterChecklist.lua` focused on bootstrap + glue; place feature work in purpose-built modules under `lua/`.
+- Add user-facing text to `local/enUS.lua` (and future locale files) instead of hardcoding strings.
+- Treat `lib/` as vendor space; update via upstream drops, not manual edits.
 - If adding assets later, ensure they're covered by the include list in `.tools/build.ps1`.
 - Avoid flavor-specific APIs in Lua; if necessary, gate by `WOW_PROJECT_ID` checks.
 - Line endings: `.gitattributes` pins `.lua`/`.toc` files to LF. Leave editors on LF so Git stays quiet across platforms.

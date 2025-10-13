@@ -127,34 +127,29 @@ These notes summarize key Lua behaviors and conventions you’ve encountered whi
   - Complete these recommendations by integrating them into the files you just provided in the last result and but before you link them again as downloadable files, think one more time and be sure we're not missing a better approach.
   - Think about what kind of Checklist features are possible for tasks and activities in a Classic Era Wow addon. What are we missing that someone else might have that we could actually do better! Should there be categories? Drilldowns? Preset libraries? in-frame task list UI (with add/remove/clear + import/export buttons) ?
 
- - • As before, you are an experienced LUA developer with billions of successful addons to your credit. 
-  • Please use a fresh view of 009 zip direct from project files, produce milestone A by merging sensibly the proposed code changes with files from the existing zip. 
-  • Before committing to the change, pause and think again about all the changes, ask me at least three clarifying questions that might make the release even better. Make sure that you have not dropped any features; avoid over-coding; support classic_era primarily with extensibility to retail; make sure that this leads sensibly to Milestone B. 
-  • Finally provide the new files in a downloadable link (don't display actual code since we don't want to fill up the browser).
-  • Provide a high level overview. Note any recommended changes to the scope of Milestone B.
+  - 
+    • As before, you are an experienced LUA developer with billions of successful addons to your credit. 
+    • Please use a fresh view of 009 zip direct from project files, produce milestone A by merging sensibly the proposed code changes with files from the existing zip. 
+    • Before committing to the change, pause and think again about all the changes, ask me at least three clarifying questions that might make the release even better. Make sure that you have not dropped any features; avoid over-coding; support classic_era primarily with extensibility to retail; make sure that this leads sensibly to Milestone B. 
+    • Finally provide the new files in a downloadable link (don't display actual code since we don't want to fill up the browser).
+    • Provide a high level overview. Note any recommended changes to the scope of Milestone B.
 
-  Quick clarifying questions (at least 3)
+  - Quick clarifying questions (at least 3)
 
-  List anatomy: do you want flat tasks first (single list) or top-level categories + tasks right away? (I can keep Milestone A flat and visually group later, or seed simple categories now so B is a pure UI step.)
-
-  Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?
-
-  Import/Export default: when a user imports without a category, should it replace the current list (simple) or merge (smarter, avoids accidental wipes)?
-
-  LDB/minimap text: show “X/Y” always, or “X” when any incomplete; blank when all done (quieter)?
-
-  Search/filter bar: include a small inline search box in Milestone A, or keep it to the All/Incomplete toggle only (fewer widgets to start)?
-
-  Sound cues: enable a subtle completion sound by default (LSM), or off by default with a toggle in Options?
-
-  Retail parity: OK to keep code paths Classic-first and defer Retail testing until after Milestone A (retail shims stay in place)?
-
-  Visual density: prefer a compact single-column list (space efficient) or two-column when the window is wide (more at-a-glance)?
-
-  Reorder now vs later: for Milestone A, is Up/Down arrows acceptable (drag in Milestone B), or do you want to skip reordering until B?
+    - List anatomy: do you want flat tasks first (single list) or top-level categories + tasks right away? (I can keep Milestone A flat and visually group later, or seed simple categories now so B is a pure UI step.)
+    - Flat lists are simpler to implement and use initially, making for a faster Milestone A, while categories + tasks provide better organization and scalability but require more UI and logic upfront.
+    - Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?  
+    - (Note: Account-wide persistence requires a different SavedVariables structure and may involve migration logic if switching from per-character to account-wide storage. Please specify if you want to support both modes or just one for now.)
+    - Persistence scope: should the task list be per-character only (Classic-standard) or offer an Account-wide list toggle now (useful for raid prep templates)?
+    - Import/Export default: when a user imports without a category, should it replace the current list (simple, but risks accidental data loss) or merge (smarter, avoids accidental wipes but may cause clutter)?
+    - Import/Export default: when a user imports without a category, should it replace the current list (simple) or merge (smarter, avoids accidental wipes)?
+    - LDB/minimap text: show “X/Y” (number of completed tasks out of total) always, or “X” when any incomplete; blank when all done (quieter)?
+    - Search/filter bar: include a small inline search box in Milestone A (improves discoverability but adds UI complexity), or keep it to the All/Incomplete toggle only (fewer widgets to start)?
+    - Sound cues: enable a subtle completion sound by default (LSM = LibSharedMedia, a popular WoW sound/media library), or off by default with a toggle in Options?
+    - Retail parity: OK to keep code paths Classic-first and defer Retail testing until after Milestone A (retail shims—compatibility code that adapts Classic code to work in Retail—stay in place)?
+    - Visual density: prefer a compact single-column list (space efficient) or two-column when the window is wide (more at-a-glance)? Consider accessibility and readability for users who may benefit from larger fonts or higher contrast.
+    - Reorder now vs later: for Milestone A, is Up/Down arrows acceptable (drag in Milestone B), or do you want to skip reordering until B?
 ---
-
-_These fundamentals cover 90% of the Lua behavior you’ll meet when building or debugging WoW addons._
 
 ## 10. Solo Git Workflow
 
@@ -217,7 +212,8 @@ _These fundamentals cover 90% of the Lua behavior you’ll meet when building or
   - Please start working incrementally with the bug list, while protecting your memory usage against Codex crashes or freezes, and ping me for approvals only as required.
 
 ## 14. Other task list addons
-   - https://www.curseforge.com/wow/addons/nys-todolist
+  These are wonderful inspirations:
+  - https://www.curseforge.com/wow/addons/nys-todolist
    
 
 

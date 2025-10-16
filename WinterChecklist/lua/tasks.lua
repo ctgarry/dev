@@ -337,18 +337,34 @@ function Tasks.Import(_, data, replace)
 end
 
 function Tasks.ImportWithPrompt(self, data)
-  local function doReplace()
-    local ok, n = self:Import(data, true)
-    if ok and NS.Print then
-      NS:Print((L.IMPORT_OK_FMT or "Imported %d tasks."):format(n or 0))
+  local chunk = (U and U.trim and U.trim(data)) or data
+  if type(chunk) ~= "string" or chunk == "" then
+    if NS.Print and L.IMPORT_NO_DATA then
+      NS:Print(L.IMPORT_NO_DATA)
+    end
+    return
+  end
+
+  local function report(ok, n)
+    if ok then
+      if NS.Print then
+        NS:Print((L.IMPORT_OK_FMT or "Imported %d tasks."):format(n or 0))
+      end
+    else
+      if NS.Print then
+        NS:Print(L.IMPORT_FAILED or "Import failed. Double-check the pasted text.")
+      end
     end
   end
 
+  local function doReplace()
+    local ok, n = self:Import(chunk, true)
+    report(ok, n)
+  end
+
   local function doMerge()
-    local ok, n = self:Import(data, false)
-    if ok and NS.Print then
-      NS:Print((L.IMPORT_OK_FMT or "Imported %d tasks."):format(n or 0))
-    end
+    local ok, n = self:Import(chunk, false)
+    report(ok, n)
   end
 
   if U and U.Confirm then

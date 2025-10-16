@@ -29,7 +29,7 @@ WinterChecklist.lua
 WinterChecklist_Mainline.toc     # Retail
 WinterChecklist_Vanilla.toc      # Classic Era
 lua/                             # UI, tasks, minimap, slash, utils modules
-local/
+i18n/
   enUS.lua                       # localization strings
 lib/                             # bundled libs (LibStub, LDB, DBIcon, LSM)
 .tools/
@@ -133,7 +133,7 @@ A small window labeled **WinterChecklist** appears; drag to move. Zone name upda
 ## Contributing / Local Dev
 
 - Keep `WinterChecklist.lua` focused on bootstrap + glue; place feature work in purpose-built modules under `lua/`.
-- Add user-facing text to `local/enUS.lua` (and future locale files) instead of hardcoding strings.
+- Add user-facing text to `i18n/enUS.lua` (and future locale files) instead of hardcoding strings.
 - Treat `lib/` as vendor space; update via upstream drops, not manual edits.
 - If adding assets later, ensure they're covered by the include list in `.tools/build.ps1`.
 - Avoid flavor-specific APIs in Lua; if necessary, gate by `WOW_PROJECT_ID` checks.

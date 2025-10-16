@@ -26,7 +26,12 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     if NS.Tasks and NS.Tasks.Export then
       local payload = NS.Tasks:Export()
       if NS.Util and NS.Util.ShowTextPopup then
-        NS.Util.ShowTextPopup(L.EXPORT_TITLE or "WinterChecklist — Export", payload)
+        NS.Util.ShowTextPopup(
+          L.EXPORT_COPY_PROMPT or L.EXPORT_TITLE or "WinterChecklist - Export",
+          payload,
+          nil,
+          { multiline = true, width = 440, height = 160, commitOnEnter = false }
+        )
       else
         NS:Print(L.EXPORT_READY or "Export string ready. Copy from the popup.")
         print(payload)
@@ -35,8 +40,21 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
   elseif cmd == "import" then
     local data = NS.Util and NS.Util.trim(rest or "") or (rest or "")
     if (not data or data == "") and NS.Util and NS.Util.ShowTextPopup then
-      NS.Util.ShowTextPopup(L.IMPORT_TITLE or "WinterChecklist — Paste Import", "")
-      NS:Print(L.IMPORT_INSTRUCTIONS or "Paste an export string into the popup and click Accept.")
+      NS.Util.ShowTextPopup(
+        L.IMPORT_PASTE_HERE or L.IMPORT_TITLE or "WinterChecklist - Paste Import",
+        "",
+        function(text)
+          if text and text ~= "" and NS.Tasks and NS.Tasks.ImportWithPrompt then
+            NS.Tasks:ImportWithPrompt(text)
+          else
+            if NS.Print and L.IMPORT_NO_DATA then
+              NS:Print(L.IMPORT_NO_DATA)
+            end
+          end
+        end,
+        { multiline = true, width = 440, height = 160, commitOnEnter = false, button1 = L.IMPORT or "Import" }
+      )
+      NS:Print(L.IMPORT_INSTRUCTIONS or "Paste an export string into the popup and click Import.")
     elseif NS.Tasks and NS.Tasks.ImportWithPrompt then
       NS.Tasks:ImportWithPrompt(data)
     end

@@ -54,21 +54,57 @@ function U.clamp(v, lo, hi)
 end
 
 -- UI helpers ------------------------------------------------------------------
-function U.ShowTextPopup(title, text, onAccept)
+function U.ShowTextPopup(title, text, onAccept, opts)
   if not StaticPopupDialogs then
     StaticPopupDialogs = {}
   end
-  StaticPopupDialogs["WCL_TEXT_POPUP"] = {
-    text = title or "WinterChecklist",
-    button1 = (NS.L and NS.L.OK) or (OKAY or "OK"),
-    button2 = (NS.L and NS.L.CANCEL) or (CANCEL or "Cancel"),
+  opts = opts or {}
+  local key = opts.key or "WCL_TEXT_POPUP"
+  local multiline = opts.multiline ~= false
+  local width = opts.width or (multiline and 420 or 260)
+  local height = opts.height or (multiline and 140 or 32)
+  local commitOnEnter = opts.commitOnEnter
+  if commitOnEnter == nil then
+    commitOnEnter = not multiline
+  end
+  local prompt = opts.prompt or title or "WinterChecklist"
+  StaticPopupDialogs[key] = {
+    text = prompt,
+    button1 = opts.button1 or (NS.L and NS.L.OK) or (OKAY or "OK"),
+    button2 = opts.button2 or (NS.L and NS.L.CANCEL) or (CANCEL or "Cancel"),
     hasEditBox = true,
     maxLetters = 0,
     OnShow = function(self)
       local eb = self.editBox
+      if not eb then
+        return
+      end
+      eb:SetMultiLine(multiline)
+      eb:SetWidth(width)
+      eb:SetHeight(height)
+      eb:SetAutoFocus(true)
+      eb:SetMaxLetters(0)
+      eb:SetCountInvisibleLetters(false)
+      eb:SetAltArrowKeyMode(false)
       eb:SetText(text or "")
-      eb:SetFocus()
       eb:HighlightText()
+      eb:SetCursorPosition(0)
+      eb:SetFocus()
+      eb:ClearAllPoints()
+      if multiline then
+        eb:SetPoint("TOPLEFT", self, "TOPLEFT", 18, -52)
+        eb:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -34, 62)
+        eb:SetHeight(height)
+        self:SetWidth(math.max(self:GetWidth(), width + 60))
+        self:SetHeight(math.max(self:GetHeight(), height + 128))
+      else
+        eb:SetPoint("TOP", self, "TOP", 0, -52)
+        eb:SetPoint("LEFT", self, "LEFT", 18, 0)
+        eb:SetPoint("RIGHT", self, "RIGHT", -17, 0)
+      end
+      if opts.onShow then
+        opts.onShow(self, eb)
+      end
     end,
     OnAccept = function(self)
       if onAccept then
@@ -76,14 +112,19 @@ function U.ShowTextPopup(title, text, onAccept)
       end
     end,
     EditBoxOnEnterPressed = function(self)
-      self:GetParent().button1:Click()
+      if commitOnEnter then
+        self:GetParent().button1:Click()
+      end
+    end,
+    EditBoxOnEscapePressed = function(self)
+      self:GetParent().button2:Click()
     end,
     timeout = 0,
     whileDead = true,
     hideOnEscape = true,
     preferredIndex = 3,
   }
-  StaticPopup_Show("WCL_TEXT_POPUP")
+  StaticPopup_Show(key)
 end
 
 -- Simple yes/no confirm dialog ------------------------------------------------

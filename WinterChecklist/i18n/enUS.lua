@@ -1,5 +1,5 @@
 --[[
-  @file    local/enUS.lua
+  @file    i18n/enUS.lua
   @brief   American English strings. Missing keys fall back to key name.
 ]]
 local _, NS = ...
@@ -119,6 +119,9 @@ L.FILTER_SECTION = "Filters"
 
 -- Task management (Buttons/Check Boxes)
 L.CLEAR = "Clear"
+L.CLEAR_SEARCH = "Clear Search"
+L.CLEAR_TASKS = "Clear Tasks"
+L.CLEAR_TASKS_TT = "Remove all tasks in the active profile."
 L.CLEAR_ALL = "Clear all tasks?"
 L.ADD_TASK = "Add Task"
 L.EDIT_TASK = "Edit Task"
@@ -155,15 +158,16 @@ L.EXPORT_COPIED = "Export data copied to clipboard."
 -- IMPORT (appearance)
 L.IMPORT = "Import"
 L.IMPORT_HEADER = "WinterChecklist Task Import"
-L.IMPORT_TITLE = "Paste Import"
+L.IMPORT_TITLE = "Import Tasks"
 L.IMPORT_BUTTON = L.IMPORT
-L.IMPORT_MERGE_BUTTON = "Import Merge"
-L.IMPORT_REPLACE = "Import Replace"
+L.IMPORT_MERGE_BUTTON = "Merge"
+L.IMPORT_MERGE = "Merge"
+L.IMPORT_REPLACE = "Replace"
 L.IMPORT_CANCEL_BUTTON = L.CANCEL
 L.IMPORT_INSTRUCTIONS =
-  "Paste the exported text from another character here and click Import. Existing tasks will be updated, new tasks will be added. To replace all existing tasks, select 'Import Replace' instead."
+  "Paste the exported text from another character here. Choose Import to merge with your current list, or Replace to overwrite it."
 L.IMPORT_REPLACE_BUTTON = L.IMPORT_REPLACE
-L.IMPORT_MERGE_OR_REPLACE = "Import Merge Or Replace"
+L.IMPORT_MERGE_OR_REPLACE = "Import: merge with existing tasks or replace them?"
 L.IMPORT_CONFIRM_REPLACE = "This will replace all existing tasks. Are you sure?"
 L.IMPORT_CONFIRM_MERGE = "This will merge with existing tasks. Are you sure?"
 L.IMPORT_REPLACED_FMT = "Imported %d tasks (%d new, %d updated, %d unchanged). Removed %d existing tasks."
@@ -171,6 +175,7 @@ L.IMPORT_PASTE_HERE = "Paste the exported task data here:"
 
 -- IMPORT (results/messages)
 L.IMPORT_DONE = "Import completed."
+L.IMPORT_OK_FMT = "Imported %d tasks."
 L.IMPORT_SUCCESS = L.TASKS_IMPORTED_FMT
 L.IMPORT_CANCELLED = "Import cancelled."
 L.IMPORT_INVALID_DATA = "Invalid import data."
@@ -179,7 +184,7 @@ L.IMPORT_NO_TASKS = "No tasks found to import."
 L.IMPORT_NOTHING_TO_IMPORT = "Nothing to import."
 L.IMPORT_NOTHING_TO_REPLACE = "Nothing to replace."
 L.IMPORT_NOTHING_TO_MERGE = "Nothing to merge."
-L.IMPORT_FAILED = "Import failed."
+L.IMPORT_FAILED = "Import failed. Double-check the pasted text."
 L.IMPORT_INVALID = L.TASKS_IMPORTED_INVALID
 L.IMPORT_TOO_MANY_TASKS = "Import failed: too many tasks."
 L.IMPORT_TOO_LARGE = "Import failed: data too large."

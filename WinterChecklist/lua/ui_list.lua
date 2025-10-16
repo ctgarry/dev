@@ -75,10 +75,21 @@ function M:Init(parent)
   clearBtn:SetSize(32, ROW_H - 4)
   clearBtn:SetText(L.CLEAR_SHORT or "X")
   clearBtn:SetScript("OnClick", function()
-    U.Confirm(L.CLEAR_ALL or "Clear all tasks?", L.YES or "Yes", L.NO or "No", function()
-      NS.Tasks:Clear()
-      M:Refresh()
-    end)
+    if M.search then
+      M.search:SetText("")
+      M.search:ClearFocus()
+    end
+  end)
+  clearBtn:SetScript("OnEnter", function(btn)
+    if GameTooltip and L.CLEAR_SEARCH then
+      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+      GameTooltip:SetText(L.CLEAR_SEARCH, 1, 1, 1)
+    end
+  end)
+  clearBtn:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
   end)
   self.btnClear = clearBtn
 
@@ -120,7 +131,17 @@ function M:Init(parent)
   btnExport:SetText(L.EXPORT or "Export")
   btnExport:SetScript("OnClick", function()
     local payload = NS.Tasks:Export()
-    U.ShowTextPopup(L.EXPORT_TITLE or "Tasks Export", payload)
+    U.ShowTextPopup(
+      L.EXPORT_COPY_PROMPT or L.EXPORT_TITLE or "Tasks Export",
+      payload,
+      nil,
+      {
+        multiline = true,
+        width = 440,
+        height = 160,
+        commitOnEnter = false,
+      }
+    )
   end)
   self.btnExport = btnExport
 
@@ -128,11 +149,26 @@ function M:Init(parent)
   btnImport:SetSize(BTN_W, ROW_H)
   btnImport:SetText(L.IMPORT or "Import")
   btnImport:SetScript("OnClick", function()
-    U.ShowTextPopup(L.IMPORT_TITLE or "Paste Import", "", function(text)
-      if text and text ~= "" then
-        NS.Tasks:ImportWithPrompt(text)
-      end
-    end)
+    U.ShowTextPopup(
+      L.IMPORT_PASTE_HERE or L.IMPORT_TITLE or "Paste Import",
+      "",
+      function(text)
+        if text and text ~= "" then
+          NS.Tasks:ImportWithPrompt(text)
+        else
+          if NS.Print and L.IMPORT_NO_DATA then
+            NS:Print(L.IMPORT_NO_DATA)
+          end
+        end
+      end,
+      {
+        multiline = true,
+        width = 440,
+        height = 160,
+        commitOnEnter = false,
+        button1 = L.IMPORT or "Import",
+      }
+    )
   end)
   self.btnImport = btnImport
 
@@ -145,9 +181,31 @@ function M:Init(parent)
         NS.Tasks:Add(text, "all")
         M:Refresh()
       end
-    end)
+    end, { multiline = false })
   end)
   self.btnAdd = btnAdd
+
+  local btnClearTasks = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
+  btnClearTasks:SetSize(BTN_W, ROW_H)
+  btnClearTasks:SetText(L.CLEAR_TASKS or L.CLEAR or "Clear")
+  btnClearTasks:SetScript("OnClick", function()
+    U.Confirm(L.CLEAR_ALL or "Clear all tasks?", L.YES or "Yes", L.NO or "No", function()
+      NS.Tasks:Clear()
+      M:Refresh()
+    end)
+  end)
+  btnClearTasks:SetScript("OnEnter", function(btn)
+    if GameTooltip and (L.CLEAR_TASKS_TT or L.CLEAR_ALL) then
+      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+      GameTooltip:SetText(L.CLEAR_TASKS_TT or L.CLEAR_ALL, 1, 1, 1, true)
+    end
+  end)
+  btnClearTasks:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
+  self.btnClearTasks = btnClearTasks
 
   local scrollFrame = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
   scrollFrame:SetClipsChildren(true)
@@ -244,7 +302,7 @@ function M:Refresh()
     return
   end
 
-  local tasks = NS.Tasks:GetAll()
+  local tasks = NS.Tasks:GetAll() or {}
   local needle = string.lower(self.search and (self.search:GetText() or "") or "")
   local wantInc = self.onlyIncomplete and self.onlyIncomplete:GetChecked()
   local wantFreq = self.freqValue or "all"
@@ -299,7 +357,7 @@ function M:Refresh()
             NS.Tasks:Edit(i, newText)
             M:Refresh()
           end
-        end)
+        end, { multiline = false })
       end)
 
       row.btnDel:SetScript("OnClick", function()
@@ -333,6 +391,14 @@ function M:Refresh()
     else
       self.emptyText:Hide()
     end
+  end
+
+  if self.btnClear then
+    local hasText = needle and needle ~= ""
+    self.btnClear:SetEnabled(hasText)
+  end
+  if self.btnClearTasks then
+    self.btnClearTasks:SetEnabled(#tasks > 0)
   end
 
   if NS.EnhanceMinimapText then
@@ -412,6 +478,15 @@ function M:Layout(parent)
     self.btnExport:SetPoint("RIGHT", self.btnImport, "LEFT", -8, 0)
     self.btnExport:SetHeight(ROW_H)
     self.btnExport:SetWidth(BTN_W)
+  end
+  if self.btnClearTasks and (self.btnExport or self.footer) then
+    self.btnClearTasks:ClearAllPoints()
+    local anchor = self.btnExport or self.footer
+    local point = self.btnExport and "LEFT" or "RIGHT"
+    local offset = self.btnExport and -8 or 0
+    self.btnClearTasks:SetPoint("RIGHT", anchor, point, offset, 0)
+    self.btnClearTasks:SetHeight(ROW_H)
+    self.btnClearTasks:SetWidth(BTN_W)
   end
 
   if self.scrollFrame and self.footer then

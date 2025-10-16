@@ -1,7 +1,7 @@
 # Codex Guardrails (WoW Addon – Classic Era)
 
 ## TL;DR (non-negotiables)
-- **Do NOT modify** `hello/` (keep for reference) and **do NOT modify** `lib/` (third-party / shared).
+- **Do NOT modify** `hello.*` (keep for reference) and **do NOT modify** `lib/` (third-party / shared).
 - **Do not remove features.** If a refactor would drop something, stop and ask.
 - Keep code **cordoned by responsibility** (e.g., `slash.lua` for slash commands).
 - **Short functions**, minimal but useful **block comments**, **no magic numbers**, use **localization** strings (add if missing).
@@ -19,12 +19,16 @@
 ---
 
 ## Module / File Boundaries
-- `slash.lua`: all slash command registration + handlers.
-- `help/` or `ui/help.lua`: aggregated help text rendering.
-- `i18n/` or `localization.lua`: strings by key; add new keys instead of hardcoding.
-- `core/*.lua`: core logic (init, events, state).
-- `ui/*.lua` + `ui/*.xml`: UI frames and layout.
-- `data/*.lua`: constants, sample presets, schema tables.
+- `WinterChecklist.lua`: bootstrap, SavedVariables defaults, event wiring, module glue.
+- `lua/utils.lua`: shared helpers (confirm dialogs, trim, etc.).
+- `lua/tasks.lua`: SavedVariables, task CRUD, import/export.
+- `lua/ui_list.lua`: main checklist frame + footer actions.
+- `lua/options.lua`: options panel + profiles.
+- `lua/minimap.lua`: LibDBIcon button + tooltip.
+- `lua/slash.lua`: slash command registration + handlers.
+- `lua/help.lua`: help overlay presentation.
+- `i18n/*.lua`: localization strings by locale; never hardcode UI text.
+- `lib/`: third-party libs (vendor space, don't edit).
 - `tests/` (optional): harnesses/mocks (non-packaged).
 
 Keep related functions grouped; prefer small, cohesive files over long grab-bags.

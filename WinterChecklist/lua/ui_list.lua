@@ -18,6 +18,14 @@ local CHECKBOX_SIZE = 18
 local EDITW = 280
 local BTN_W = 100
 
+local LIST_BACKDROP = {
+  bgFile = "Interface\\FrameGeneral\\UI-Background-Parchment",
+  edgeFile = nil,
+  tile = false,
+  edgeSize = 0,
+  insets = { left = 0, right = 0, top = 0, bottom = 0 },
+}
+
 local function freqMatch(row, want)
   if want == "all" then
     return true
@@ -49,11 +57,15 @@ function M:Init(parent)
   self._inited = true
   self.parent = parent
 
-  local topOffset = parent._contentTopOffset or 48
-  local container = CreateFrame("Frame", nil, parent)
+  local host = parent.content or parent
+  local topOffset = parent._contentTopOffset or 32
+  local container = CreateFrame("Frame", nil, host, "BackdropTemplate")
   self.frame = container
-  container:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, -topOffset)
-  container:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -12, 12)
+  container:SetPoint("TOPLEFT", host, "TOPLEFT", 8, -topOffset)
+  container:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", -8, 12)
+  container:SetBackdrop(LIST_BACKDROP)
+  container:SetBackdropColor(0.98, 0.95, 0.88, 0.98)
+  container:SetFrameLevel((host:GetFrameLevel() or 1) + 1)
 
   local header = CreateFrame("Frame", nil, container)
   self.header = header
@@ -103,16 +115,19 @@ function M:Init(parent)
     { value = "daily", label = L.FILTER_FREQ_DAILY or "Daily" },
     { value = "weekly", label = L.FILTER_FREQ_WEEKLY or "Weekly" },
   }
-  local prevRadio
+  local prevAnchor
   for _, opt in ipairs(freqOptions) do
     local radio = CreateFrame("CheckButton", nil, freqRow, "UIRadioButtonTemplate")
     if radio.text then
-      radio.text:SetText(opt.label)
+      radio.text:ClearAllPoints()
+      radio.text:SetPoint("LEFT", radio, "RIGHT", 4, 0)
+      radio.text:SetJustifyH("LEFT")
       radio.text:SetFontObject("GameFontHighlightSmall")
+      radio.text:SetText(opt.label)
     end
-    radio:SetHitRectInsets(0, -8, 0, 0)
-    if prevRadio then
-      radio:SetPoint("LEFT", prevRadio, "RIGHT", 12, 0)
+    radio:SetHitRectInsets(0, -12, 0, 0)
+    if prevAnchor then
+      radio:SetPoint("LEFT", prevAnchor, "RIGHT", 24, 0)
     else
       radio:SetPoint("LEFT", freqRow, "LEFT", 0, 0)
     end
@@ -125,14 +140,18 @@ function M:Init(parent)
       M:SetFrequency(opt.value)
     end)
     self.freqButtons[opt.value] = radio
-    prevRadio = radio
+    prevAnchor = (radio.text or radio)
   end
 
   local inc = CreateFrame("CheckButton", nil, freqRow, "UICheckButtonTemplate")
   inc.text:SetText(L.FILTER_INCOMPLETE or "Incomplete")
   inc.text:SetFontObject("GameFontHighlightSmall")
-  inc:SetPoint("LEFT", prevRadio, "RIGHT", 20, 0)
-  inc:SetHitRectInsets(0, -8, 0, 0)
+  if prevAnchor then
+    inc:SetPoint("LEFT", prevAnchor, "RIGHT", 28, 0)
+  else
+    inc:SetPoint("LEFT", freqRow, "LEFT", 0, 0)
+  end
+  inc:SetHitRectInsets(0, -12, 0, 0)
   inc:SetScript("OnClick", function(selfBtn)
     PlaySound(SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 857)
     M:Refresh()
@@ -143,52 +162,6 @@ function M:Init(parent)
   local footer = CreateFrame("Frame", nil, container)
   footer:SetHeight(FOOTER_H)
   self.footer = footer
-
-  local btnExport = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
-  btnExport:SetSize(BTN_W, ROW_H)
-  btnExport:SetText(L.EXPORT or "Export")
-  btnExport:SetScript("OnClick", function()
-    local payload = NS.Tasks:Export()
-    U.ShowTextPopup(
-      L.EXPORT_COPY_PROMPT or L.EXPORT_TITLE or "Tasks Export",
-      payload,
-      nil,
-      {
-        multiline = true,
-        width = 440,
-        height = 160,
-        commitOnEnter = false,
-      }
-    )
-  end)
-  self.btnExport = btnExport
-
-  local btnImport = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
-  btnImport:SetSize(BTN_W, ROW_H)
-  btnImport:SetText(L.IMPORT or "Import")
-  btnImport:SetScript("OnClick", function()
-    U.ShowTextPopup(
-      L.IMPORT_PASTE_HERE or L.IMPORT_TITLE or "Paste Import",
-      "",
-      function(text)
-        if text and text ~= "" then
-          NS.Tasks:ImportWithPrompt(text)
-        else
-          if NS.Print and L.IMPORT_NO_DATA then
-            NS:Print(L.IMPORT_NO_DATA)
-          end
-        end
-      end,
-      {
-        multiline = true,
-        width = 440,
-        height = 160,
-        commitOnEnter = false,
-        button1 = L.IMPORT or "Import",
-      }
-    )
-  end)
-  self.btnImport = btnImport
 
   local btnAdd = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
   btnAdd:SetSize(BTN_W, ROW_H)
@@ -203,28 +176,6 @@ function M:Init(parent)
   end)
   self.btnAdd = btnAdd
 
-  local btnClearTasks = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
-  btnClearTasks:SetSize(BTN_W, ROW_H)
-  btnClearTasks:SetText(L.CLEAR_TASKS or L.CLEAR or "Clear")
-  btnClearTasks:SetScript("OnClick", function()
-    U.Confirm(L.CLEAR_ALL or "Clear all tasks?", L.YES or "Yes", L.NO or "No", function()
-      NS.Tasks:Clear()
-      M:Refresh()
-    end)
-  end)
-  btnClearTasks:SetScript("OnEnter", function(btn)
-    if GameTooltip and (L.CLEAR_TASKS_TT or L.CLEAR_ALL) then
-      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
-      GameTooltip:SetText(L.CLEAR_TASKS_TT or L.CLEAR_ALL, 1, 1, 1, true)
-    end
-  end)
-  btnClearTasks:SetScript("OnLeave", function()
-    if GameTooltip then
-      GameTooltip:Hide()
-    end
-  end)
-  self.btnClearTasks = btnClearTasks
-
   local scrollFrame = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
   scrollFrame:SetClipsChildren(true)
   self.scrollFrame = scrollFrame
@@ -233,6 +184,14 @@ function M:Init(parent)
   scrollChild:SetPoint("TOPLEFT")
   scrollFrame:SetScrollChild(scrollChild)
   self.scrollChild = scrollChild
+  local scrollBar = scrollFrame.ScrollBar
+  if scrollBar then
+    scrollBar:ClearAllPoints()
+    scrollBar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", 4, -18)
+    scrollBar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", 4, 18)
+    scrollBar:Show()
+  end
+  self.scrollBar = scrollBar
 
   self.emptyText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   self.emptyText:SetText(L.EMPTY_STATE or "No tasks yet - click Add, or type: /wcl add <task>")
@@ -283,12 +242,13 @@ local function ensureRow(index, parent)
   row.chk:SetPoint("LEFT", row, "LEFT", 0, 0)
   row.chk:SetPoint("TOP", row, "TOP", 0, -2)
   row.chk:SetSize(CHECKBOX_SIZE, CHECKBOX_SIZE)
-  row.chk:SetHitRectInsets(0, -6, 0, 0)
+  row.chk:SetHitRectInsets(-4, -12, -4, -4)
 
   local function mkTextBtn(width, label)
     local b = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
     b:SetSize(width, ROW_H - 4)
     b:SetText(label)
+    b:SetMotionScriptsWhileDisabled(true)
     return b
   end
   local function mkIconBtn(direction, tooltip)
@@ -315,8 +275,37 @@ local function ensureRow(index, parent)
     end
     return b
   end
+  local function mkGlyphBtn(texture, tooltip)
+    local b = CreateFrame("Button", nil, row, "UIPanelSquareButton")
+    b:SetSize(20, 20)
+    b:SetMotionScriptsWhileDisabled(true)
+    if b.icon then
+      b.icon:SetTexture(texture)
+      b.icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+    else
+      local icon = b:CreateTexture(nil, "ARTWORK")
+      icon:SetAllPoints()
+      icon:SetTexture(texture)
+      icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+      b.icon = icon
+    end
+    if tooltip then
+      b:SetScript("OnEnter", function(btn)
+        if GameTooltip then
+          GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+          GameTooltip:SetText(tooltip, 1, 1, 1, true)
+        end
+      end)
+      b:SetScript("OnLeave", function()
+        if GameTooltip then
+          GameTooltip:Hide()
+        end
+      end)
+    end
+    return b
+  end
 
-  row.btnDel = mkTextBtn(26, L.DELETE_SHORT or "X")
+  row.btnDel = mkTextBtn(26, L.DELETE_SHORT or "x")
   row.btnDel:SetPoint("RIGHT", row, "RIGHT", 0, 0)
   row.btnDel:SetScript("OnEnter", function(btn)
     if GameTooltip then
@@ -330,19 +319,8 @@ local function ensureRow(index, parent)
     end
   end)
 
-  row.btnEdit = mkTextBtn(40, L.EDIT_SHORT or L.EDIT or "Edit")
+  row.btnEdit = mkGlyphBtn("Interface\\Buttons\\UI-GuildButton-MOTD-Up", L.EDIT_TASK or "Edit task")
   row.btnEdit:SetPoint("RIGHT", row.btnDel, "LEFT", -4, 0)
-  row.btnEdit:SetScript("OnEnter", function(btn)
-    if GameTooltip then
-      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
-      GameTooltip:SetText(L.EDIT_TASK or "Edit task", 1, 1, 1, true)
-    end
-  end)
-  row.btnEdit:SetScript("OnLeave", function()
-    if GameTooltip then
-      GameTooltip:Hide()
-    end
-  end)
 
   row.btnDown = mkIconBtn("DOWN", L.MOVE_DOWN or "Move down")
   row.btnDown:SetPoint("RIGHT", row.btnEdit, "LEFT", -6, 0)
@@ -352,7 +330,7 @@ local function ensureRow(index, parent)
 
   row.txt = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   row.txt:SetPoint("LEFT", row.chk, "RIGHT", 6, 0)
-  row.txt:SetPoint("RIGHT", row.btnUp, "LEFT", -8, 0)
+  row.txt:SetPoint("RIGHT", row.btnUp, "LEFT", -10, 0)
   row.txt:SetJustifyH("LEFT")
   row.txt:SetWordWrap(false)
 
@@ -474,10 +452,6 @@ function M:Refresh()
     local hasText = needle and needle ~= ""
     self.btnClear:SetEnabled(hasText)
   end
-  if self.btnClearTasks then
-    self.btnClearTasks:SetEnabled(#tasks > 0)
-  end
-
   if NS.EnhanceMinimapText then
     NS.EnhanceMinimapText()
   end
@@ -519,9 +493,9 @@ function M:Layout(parent)
   local freqHeight = 0
   if self.freqRow and self.search then
     self.freqRow:ClearAllPoints()
-    self.freqRow:SetPoint("TOPLEFT", self.search, "BOTTOMLEFT", 0, -8)
-    local anchorRight = self.btnClear or self.search
-    self.freqRow:SetPoint("RIGHT", anchorRight, "RIGHT", 0, 0)
+    local offsetY = labelHeight + HEADER_GAP + ROW_H + 8
+    self.freqRow:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -offsetY)
+    self.freqRow:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -offsetY)
     self.freqRow:SetHeight(ROW_H)
     freqHeight = ROW_H + 8
   end
@@ -535,42 +509,21 @@ function M:Layout(parent)
 
   if self.btnAdd and self.footer then
     self.btnAdd:ClearAllPoints()
-    self.btnAdd:SetPoint("RIGHT", self.footer, "RIGHT", 0, 0)
+    self.btnAdd:SetPoint("CENTER", self.footer, "CENTER", 0, 0)
     self.btnAdd:SetHeight(ROW_H)
     self.btnAdd:SetWidth(BTN_W)
-  end
-  if self.btnImport and self.btnAdd then
-    self.btnImport:ClearAllPoints()
-    self.btnImport:SetPoint("RIGHT", self.btnAdd, "LEFT", -8, 0)
-    self.btnImport:SetHeight(ROW_H)
-    self.btnImport:SetWidth(BTN_W)
-  end
-  if self.btnExport and self.btnImport then
-    self.btnExport:ClearAllPoints()
-    self.btnExport:SetPoint("RIGHT", self.btnImport, "LEFT", -8, 0)
-    self.btnExport:SetHeight(ROW_H)
-    self.btnExport:SetWidth(BTN_W)
-  end
-  if self.btnClearTasks and (self.btnExport or self.footer) then
-    self.btnClearTasks:ClearAllPoints()
-    local anchor = self.btnExport or self.footer
-    local point = self.btnExport and "LEFT" or "RIGHT"
-    local offset = self.btnExport and -8 or 0
-    self.btnClearTasks:SetPoint("RIGHT", anchor, point, offset, 0)
-    self.btnClearTasks:SetHeight(ROW_H)
-    self.btnClearTasks:SetWidth(BTN_W)
   end
 
   if self.scrollFrame and self.footer then
     local topOffset = labelHeight + HEADER_GAP + ROW_H + HEADER_GAP + freqHeight + HEADER_GAP
     self.scrollFrame:ClearAllPoints()
-    self.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -topOffset)
-    self.scrollFrame:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -topOffset)
-    self.scrollFrame:SetPoint("BOTTOMLEFT", self.footer, "TOPLEFT", 0, HEADER_GAP)
-    self.scrollFrame:SetPoint("BOTTOMRIGHT", self.footer, "TOPRIGHT", 0, HEADER_GAP)
+    self.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -topOffset)
+    self.scrollFrame:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -24, -topOffset)
+    self.scrollFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, FOOTER_H + 6)
+    self.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -24, FOOTER_H + 6)
 
     local scrollWidth = self.scrollFrame:GetWidth()
-      - ((self.scrollFrame.ScrollBar and self.scrollFrame.ScrollBar:GetWidth()) or 18)
+      - ((self.scrollBar and self.scrollBar:GetWidth()) or 18)
       - SCROLL_PAD
     if scrollWidth < 0 then
       scrollWidth = 0

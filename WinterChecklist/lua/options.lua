@@ -5,6 +5,7 @@
 ]]
 local ADDON, NS = ...
 local L = NS.L
+local U = NS.Util or {}
 local unpack = table.unpack or _G.unpack
 
 local Opt = {}
@@ -138,20 +139,127 @@ local function ensurePanel()
     return not not (WinterChecklistDB.ui and WinterChecklistDB.ui.locked)
   end, function(val)
     WinterChecklistDB.ui.locked = val
-    NS.RefreshMainUIForOptions()
+  NS.RefreshMainUIForOptions()
   end)
 
+  -- Layout width
+  local cbWide = CheckBox(p, L.OPT_DOUBLE_WIDE, { "TOPLEFT", cbLock, "BOTTOMLEFT", 0, -8 }, function()
+    return WinterChecklistDB.ui and (WinterChecklistDB.ui.doubleWide == true)
+  end, function(val)
+    WinterChecklistDB.ui = WinterChecklistDB.ui or {}
+    WinterChecklistDB.ui.doubleWide = val and true or false
+    NS.ApplyFrameLayout()
+  end)
+  cbWide.tooltipText = L.OPT_DOUBLE_WIDE_TT
+
   -- Show help button
-  local cbHelp = CheckBox(p, L.OPT_SHOW_HELP, { "TOPLEFT", cbLock, "BOTTOMLEFT", 0, -8 }, function()
+  local cbHelp = CheckBox(p, L.OPT_SHOW_HELP, { "TOPLEFT", cbWide, "BOTTOMLEFT", 0, -8 }, function()
     return WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false)
   end, function(val)
     WinterChecklistDB.ui.showHelp = val
     NS.RefreshMainUIForOptions()
   end)
 
+  -- Task actions
+  local actionsTitle = p:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+  actionsTitle:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -24)
+  actionsTitle:SetText(L.OPT_TASK_ACTIONS or "Task Actions")
+
+  local btnClear = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+  btnClear:SetSize(140, 22)
+  btnClear:SetPoint("TOPLEFT", actionsTitle, "BOTTOMLEFT", 0, -8)
+  btnClear:SetText(L.CLEAR_TASKS or "Clear Tasks")
+  btnClear:SetScript("OnShow", function(self)
+    local tasks = (NS.Tasks and NS.Tasks.GetAll and NS.Tasks:GetAll()) or {}
+    self:SetEnabled(#tasks > 0)
+  end)
+  btnClear:SetScript("OnClick", function()
+    local function wipeTasks()
+      if NS.Tasks and NS.Tasks.Clear then
+        NS.Tasks:Clear()
+        if NS.UIList and NS.UIList.Refresh then
+          NS.UIList:Refresh()
+        end
+      end
+    end
+    if U.Confirm then
+      U.Confirm(L.CLEAR_ALL or "Clear all tasks?", L.YES or "Yes", L.NO or "No", wipeTasks)
+    else
+      wipeTasks()
+    end
+  end)
+
+  local btnExport = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+  btnExport:SetSize(140, 22)
+  btnExport:SetPoint("LEFT", btnClear, "RIGHT", 8, 0)
+  btnExport:SetText(L.OPT_EXPORT_BUTTON or L.EXPORT or "Export")
+  btnExport:SetScript("OnShow", function(self)
+    local tasks = (NS.Tasks and NS.Tasks.GetAll and NS.Tasks:GetAll()) or {}
+    self:SetEnabled(#tasks > 0)
+  end)
+  btnExport:SetScript("OnClick", function()
+    if not (NS.Tasks and NS.Tasks.Export) then
+      return
+    end
+    local payload = NS.Tasks:Export()
+    if U.ShowTextPopup then
+      U.ShowTextPopup(
+        L.EXPORT_COPY_PROMPT or L.EXPORT_TITLE or "Tasks Export",
+        payload,
+        nil,
+        {
+          multiline = true,
+          width = 440,
+          height = 160,
+          commitOnEnter = false,
+        }
+      )
+    else
+      if NS.Print then
+        NS:Print(L.EXPORT_READY or "Export string ready. Copy from the popup.")
+      end
+      print(payload)
+    end
+  end)
+
+  local btnImport = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+  btnImport:SetSize(140, 22)
+  btnImport:SetPoint("LEFT", btnExport, "RIGHT", 8, 0)
+  btnImport:SetText(L.OPT_IMPORT_BUTTON or L.IMPORT or "Import")
+  btnImport:SetScript("OnClick", function()
+    if not (NS.Tasks and NS.Tasks.ImportWithPrompt) then
+      return
+    end
+    local function handleImport(text)
+      if text and text ~= "" then
+        NS.Tasks:ImportWithPrompt(text)
+      else
+        if NS.Print and L.IMPORT_NO_DATA then
+          NS:Print(L.IMPORT_NO_DATA)
+        end
+      end
+    end
+    if U.ShowTextPopup then
+      U.ShowTextPopup(
+        L.IMPORT_PASTE_HERE or L.IMPORT_TITLE or "Paste Import",
+        "",
+        handleImport,
+        {
+          multiline = true,
+          width = 440,
+          height = 160,
+          commitOnEnter = false,
+          button1 = L.IMPORT or "Import",
+        }
+      )
+    else
+      handleImport(nil)
+    end
+  end)
+
   -- Feedback section: sound on task add ---------------------------------------
   local fbTitle = p:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  fbTitle:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -24)
+  fbTitle:SetPoint("TOPLEFT", btnClear, "BOTTOMLEFT", 0, -30)
   fbTitle:SetText(L.OPT_FEEDBACK_SECTION)
 
   local cbSound = CheckBox(p, L.OPT_SOUND_ON_ADD, { "TOPLEFT", fbTitle, "BOTTOMLEFT", 0, -8 }, function()

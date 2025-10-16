@@ -36,12 +36,13 @@ local L = NS.L
 WinterChecklistDB = WinterChecklistDB or {}
 
 -- Constants -------------------------------------------------------------------
-C.FRAME_W_DEFAULT = 460
-C.FRAME_H_DEFAULT = 360
+C.FRAME_W_DEFAULT = 340
+C.FRAME_H_DEFAULT = 380
+C.FRAME_W_DOUBLE = 600
 C.FRAME_W_MIN = C.FRAME_W_DEFAULT
 C.FRAME_H_MIN = C.FRAME_H_DEFAULT
-C.FRAME_W_MAX = 720
-C.FRAME_H_MAX = 520
+C.FRAME_W_MAX = C.FRAME_W_DOUBLE
+C.FRAME_H_MAX = C.FRAME_H_DEFAULT
 C.HELP_BTN_W = 24
 C.HELP_BTN_H = 20
 C.TITLE_MARGIN_X = 12
@@ -53,6 +54,14 @@ C.BACKDROP = {
   tileSize = 0,
   edgeSize = 16,
   insets = { left = 12, right = 12, top = 12, bottom = 12 },
+}
+C.CONTENT_BACKDROP = {
+  bgFile = "Interface\\FrameGeneral\\UI-Background-Parchment",
+  edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+  tile = false,
+  tileSize = 0,
+  edgeSize = 12,
+  insets = { left = 10, right = 10, top = 10, bottom = 10 },
 }
 
 -- LibSharedMedia --------------------------------------------------------------
@@ -109,7 +118,7 @@ local DEFAULTS = {
     y = 0,
     shown = true,
   },
-  ui = { locked = false, showHelp = true, soundOnAdd = true, soundName = "" },
+  ui = { locked = false, showHelp = true, soundOnAdd = true, soundName = "", doubleWide = false },
   profile = { active = "Default" },
   chars = {}, -- populated in tasks.lua
 }
@@ -190,20 +199,54 @@ function NS.DPrint(_, msg)
   end
 end
 
+function NS.ApplyFrameLayout()
+  if not NS.frame then
+    return
+  end
+  WinterChecklistDB.ui = WinterChecklistDB.ui or {}
+  local width = WinterChecklistDB.ui.doubleWide and C.FRAME_W_DOUBLE or C.FRAME_W_DEFAULT
+  local height = C.FRAME_H_DEFAULT
+  WinterChecklistDB.frame = WinterChecklistDB.frame or {}
+  apply_resize_bounds(NS.frame)
+  NS.frame:SetSize(width, height)
+  WinterChecklistDB.frame.w = width
+  WinterChecklistDB.frame.h = height
+  if NS.UIList and NS.UIList.Layout then
+    NS.UIList:Layout(NS.frame)
+  end
+  if NS.UIList and NS.UIList.Refresh then
+    NS.UIList:Refresh()
+  end
+end
+
 -- Main Frame ------------------------------------------------------------------
 local function CreateMainFrame()
   if NS.frame then
     return
   end
   local f = CreateFrame("Frame", ADDON .. "MainFrame", UIParent, "BackdropTemplate")
-  f:SetSize(WinterChecklistDB.frame.w, WinterChecklistDB.frame.h)
   f:SetBackdrop(C.BACKDROP)
   if f.SetBackdropColor then
-    f:SetBackdropColor(0.07, 0.07, 0.1, 0.95)
+    f:SetBackdropColor(0.95, 0.94, 0.9, 0.98)
   end
   if f.SetBackdropBorderColor then
-    f:SetBackdropBorderColor(0.8, 0.65, 0.3, 1)
+    f:SetBackdropBorderColor(0.82, 0.68, 0.35, 1)
   end
+
+  local shadow = f:CreateTexture(nil, "BACKGROUND")
+  shadow:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -6)
+  shadow:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 6)
+  shadow:SetColorTexture(0, 0, 0, 0.18)
+  shadow:SetDrawLayer("BACKGROUND", -1)
+
+  local content = CreateFrame("Frame", nil, f, "BackdropTemplate")
+  content:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -42)
+  content:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 12)
+  content:SetBackdrop(C.CONTENT_BACKDROP)
+  content:SetBackdropColor(0.97, 0.94, 0.86, 0.95)
+  content:SetBackdropBorderColor(0.65, 0.5, 0.25, 0.85)
+  f.content = content
+
   apply_resize_bounds(f)
   restore_position(f)
 
@@ -240,32 +283,33 @@ local function CreateMainFrame()
 
   -- Body stub (placeholder for tasks UI later)
   local body = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-  body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
-  body:SetWidth(WinterChecklistDB.frame.w - 24)
+  body:SetPoint("TOPLEFT", content, "TOPLEFT", 12, -12)
+  body:SetPoint("RIGHT", content, "RIGHT", -12, 0)
   body:SetJustifyH("LEFT")
   body:SetText("|cffaaaaaa" .. L.TASKS_HEADER .. " - " .. L.HELP_SUMMARY_BODY .. "|r")
   f.bodyText = body
 
-  f._contentTopOffset = 48
+  f._contentTopOffset = 32
 
   -- Close
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", 0, 0)
 
-    f:SetScript("OnSizeChanged", function(self, width, height)
-      local clampedW, clampedH = clamp_resize(self, width, height)
-      if clampedW ~= width or clampedH ~= height then
-        self:SetSize(clampedW, clampedH)
-        width, height = clampedW, clampedH
+  f:SetScript("OnSizeChanged", function(self, width, height)
+    local clampedW, clampedH = clamp_resize(self, width, height)
+    if clampedW ~= width or clampedH ~= height then
+      self:SetSize(clampedW, clampedH)
+      width, height = clampedW, clampedH
       end
       WinterChecklistDB.frame.w = width
       WinterChecklistDB.frame.h = height
       if self._OnFrameSized then
         self:_OnFrameSized()
       end
-    end)
+  end)
 
   NS.frame = f
+  NS.ApplyFrameLayout()
   if WinterChecklistDB.frame.shown then
     f:Show()
   else

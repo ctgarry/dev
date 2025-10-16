@@ -5,14 +5,29 @@ _Status: Build 022 (Classic Era reload test)_
 ## Outstanding Issues
 
 ### Layout & Styling
-- [x] **High** - UPDATED: Main window should not resize.
-  - Resize grabber removed; frame clamps to styled default dimensions.
+- [x] **High** - Footer data actions (Clear/Export/Import) should live in Options, not on the main window.
+- [x] **Medium** - ScrollFrame needs a visible scrollbar alongside mouse wheel support.
+- [x] **Medium** - Parchment should fill edge-to-edge; remove remaining black gutters/transparent seams.
+- [x] **Medium** - Nested container borders are showing mid-panel; flatten or hide redundant frames.
+- [x] **Low** - Current edit quill reads as a horn/bugle; source a clearer pencil/quill icon.
+- [ ] **Medium** - Footer action buttons clash (bold red) against parchment; restyle to match Blizzard theme.
+- [x] **High** - Main window should not resize.
 - [x] **Medium** - Main window border should match Blizzard dialog styling.
-  - Marble background + dialog border with warm tint now drive the shell.
-- [x] **Medium** - Task row buttons are oversized and labels too verbose.
-  - Rebuilt action cluster with compact icons/tooltips for edit/move/delete.
+  - Marble background + dialog border with warm tint now style the shell.
+- [x] **Medium** - Task row buttons were oversized and labels too verbose.
+  - Compact icon/text buttons now handle edit/move/delete.
 - [x] **Medium** - Frequency filter should use radio buttons under the search bar.
   - Inline radios + checkbox row replace the dropdown for faster filtering.
+- [x] **Medium** - Marble backdrop/warm tint barely visible; central pane renders nearly black with transparent margins.
+  - Added parchment inset with drop shadow so the list panel reads as parchment instead of solid black.
+- [x] **Medium** - Default frame should mirror Blizzard dialog proportions (narrower/taller) with an Options toggle for "double-wide" display; keep frame non-resizable.
+  - Frame now opens at Blizzard dialog scale with a new "Double-wide layout" option in the panel.
+- [x] **Low** - Replace Edit text button with a Classic-safe pencil icon (current attempts draw a square fallback).
+  - Swapped to the guild MOTD quill icon, applied via square button template for consistent theming.
+- [x] **Low** - Delete button should use a lowercase `x` to match Blizzard microbuttons.
+  - Updated localization to render the footer delete as a lowercase x.
+- [x] **Medium** - Frequency radio row spacing overlaps labels and the "Incomplete only" checkbox.
+  - Re-anchored the radio row so labels breathe and the checkbox sits clear of the last option.
 
 ### Interaction & UX
 - [ ] **Medium** - Help popup should close on ESC.
@@ -63,3 +78,11 @@ _Status: Build 022 (Classic Era reload test)_
 - Header clear now only empties the search box; footer button handles task wipe with confirm.
 - Export popup now uses a multi-line edit box for easier copy/paste.
 - Import flow trims pasted data, prompts for merge vs replace, and reports success/failure.
+- Resize grabber removed; frame clamps to styled default dimensions.
+- Marble background + dialog border with warm tint now drive the shell.
+- Rebuilt action cluster with compact icons/tooltips for edit/move/delete.
+- Inline radios + checkbox row replace the dropdown for faster filtering.
+- Task data actions now live in Options (clear/export/import) instead of the main footer.
+- ScrollFrame shows a visible scrollbar alongside mouse wheel scrolling.
+- Parchment background fills edge-to-edge without black gutters or extra borders.
+

@@ -15,6 +15,7 @@ lib/CallbackHandler-1.0/CallbackHandler-1.0.lua
 lua/utils.lua
 i18n/enUS.lua
 WinterChecklist.lua
+lua/profiles.lua
 lua/minimap.lua
 lua/tasks.lua
 lua/options.lua

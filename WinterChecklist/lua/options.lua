@@ -114,20 +114,51 @@ local function ensurePanel()
   end)
   p._wclMinimap = cbMinimap
 
-  -- Account-wide tasks
-  local cbAccount = CheckBox(p, L.OPT_ACCOUNT_WIDE, { "TOPLEFT", cbMinimap, "BOTTOMLEFT", 0, -8 }, function()
-    return not not (WinterChecklistDB and WinterChecklistDB.accountWide)
+  -- Shared list opt-in (per character)
+  local cbShared = CheckBox(p, L.OPT_ACCOUNT_WIDE, { "TOPLEFT", cbMinimap, "BOTTOMLEFT", 0, -8 }, function()
+    return NS.Profiles and NS.Profiles:IsOptedIn()
   end, function(val)
-    WinterChecklistDB.accountWide = val and true or false
-    if NS.UIList and NS.UIList.Refresh then
-      NS.UIList:Refresh()
+    if NS.Profiles then
+      NS.Profiles:SetOptIn(val and true or false)
     end
   end)
-  cbAccount.tooltipText = L.OPT_ACCOUNT_WIDE_TT
-  p._wclAccountCheck = cbAccount
+  cbShared.tooltipText = L.OPT_ACCOUNT_WIDE_TT
+  p._wclSharedCheck = cbShared
+
+  local sharedHelp = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+  sharedHelp:SetSize(22, 20)
+  sharedHelp:SetPoint("LEFT", cbShared.Text, "RIGHT", 8, 0)
+  sharedHelp:SetText("?")
+  sharedHelp:SetScript("OnEnter", function(btn)
+    if GameTooltip and L.OPT_ACCOUNT_WIDE_HELP_TT then
+      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+      GameTooltip:SetText(L.OPT_ACCOUNT_WIDE_HELP_TT, 1, 1, 1, true)
+    end
+  end)
+  sharedHelp:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
+  sharedHelp:SetScript("OnClick", function()
+    if not StaticPopupDialogs then
+      StaticPopupDialogs = {}
+    end
+    StaticPopupDialogs["WCL_SHARED_LIST_HELP"] = {
+      text = L.OPT_ACCOUNT_WIDE_HELP_BODY,
+      button1 = L.OK or "OK",
+      timeout = 0,
+      whileDead = true,
+      hideOnEscape = true,
+      preferredIndex = 3,
+    }
+    StaticPopup_Show("WCL_SHARED_LIST_HELP")
+  end)
+  sharedHelp.tooltipText = L.OPT_ACCOUNT_WIDE_HELP_TT
+  p._wclSharedHelp = sharedHelp
 
   -- Debug
-  local cbDebug = CheckBox(p, L.OPT_DEBUG, { "TOPLEFT", cbAccount, "BOTTOMLEFT", 0, -8 }, function()
+  local cbDebug = CheckBox(p, L.OPT_DEBUG, { "TOPLEFT", cbShared, "BOTTOMLEFT", 0, -8 }, function()
     return not not WinterChecklistDB.debug
   end, function(val)
     WinterChecklistDB.debug = val
@@ -336,6 +367,14 @@ local function ensurePanel()
 
   -- Add "About" subcategory (safe registration)
   addAboutSubcategory(p)
+end
+
+function Opt:RefreshSharedCheckbox()
+  if not self.panel or not self.panel._wclSharedCheck then
+    return
+  end
+  local usingShared = NS.Profiles and NS.Profiles:IsOptedIn() or false
+  self.panel._wclSharedCheck:SetChecked(usingShared)
 end
 
 C_Timer.After(0, ensurePanel)

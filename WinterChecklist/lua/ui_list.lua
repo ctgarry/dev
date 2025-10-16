@@ -104,6 +104,33 @@ function M:Init(parent)
   end)
   self.btnClear = clearBtn
 
+  local sharedToggle = CreateFrame("CheckButton", nil, header, "UICheckButtonTemplate")
+  sharedToggle.text:SetFontObject("GameFontHighlightSmall")
+  sharedToggle.text:SetText(L.SHARED_LIST_LABEL or "Use shared list")
+  sharedToggle:SetHitRectInsets(0, -140, 0, 0)
+  sharedToggle:SetScript("OnClick", function(btn)
+    PlaySound(SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 857)
+    if NS.Profiles then
+      NS.Profiles:SetOptIn(btn:GetChecked())
+    end
+    M:UpdateSharedToggle()
+  end)
+  sharedToggle:SetScript("OnShow", function()
+    M:UpdateSharedToggle()
+  end)
+  sharedToggle:SetScript("OnEnter", function(btn)
+    if GameTooltip and L.SHARED_LIST_TT then
+      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+      GameTooltip:SetText(L.SHARED_LIST_TT, 1, 1, 1, true)
+    end
+  end)
+  sharedToggle:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
+  self.accountToggle = sharedToggle
+
   self.freqValue = "all"
   local freqRow = CreateFrame("Frame", nil, header)
   freqRow:SetHeight(ROW_H)
@@ -357,6 +384,8 @@ function M:Refresh()
     return
   end
 
+  self:UpdateSharedToggle()
+
   local tasks = NS.Tasks:GetAll() or {}
   local needle = string.lower(self.search and (self.search:GetText() or "") or "")
   local wantInc = self.onlyIncomplete and self.onlyIncomplete:GetChecked()
@@ -490,6 +519,16 @@ function M:Layout(parent)
     self.btnClear:SetWidth(32)
   end
 
+  if self.accountToggle then
+    self.accountToggle:ClearAllPoints()
+    local anchor = self.btnClear or self.search
+    if anchor then
+      self.accountToggle:SetPoint("LEFT", anchor, "RIGHT", 16, 0)
+    else
+      self.accountToggle:SetPoint("TOPLEFT", frame, "TOPLEFT", EDITW + 24, -(labelHeight + HEADER_GAP))
+    end
+  end
+
   local freqHeight = 0
   if self.freqRow and self.search then
     self.freqRow:ClearAllPoints()
@@ -537,4 +576,12 @@ function M:Layout(parent)
       self.emptyText:SetWidth(math.max(scrollWidth - 8, 0))
     end
   end
+end
+
+function M:UpdateSharedToggle()
+  if not self.accountToggle then
+    return
+  end
+  local usingShared = NS.Profiles and NS.Profiles:IsOptedIn() or false
+  self.accountToggle:SetChecked(usingShared)
 end

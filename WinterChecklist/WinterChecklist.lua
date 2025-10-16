@@ -121,6 +121,7 @@ local DEFAULTS = {
   ui = { locked = false, showHelp = true, soundOnAdd = true, soundName = "", doubleWide = false },
   profile = { active = "Default" },
   chars = {}, -- populated in tasks.lua
+  sharedList = { optIn = {}, seeded = {}, tasks = {} },
 }
 
 -- Utilities -------------------------------------------------------------------
@@ -269,6 +270,34 @@ local function CreateMainFrame()
   title:SetPoint("TOPLEFT", C.TITLE_MARGIN_X, C.TITLE_MARGIN_Y)
   title:SetText(L.ADDON_NAME)
 
+  local modeBadge = CreateFrame("Button", nil, f)
+  modeBadge:SetPoint("LEFT", title, "RIGHT", 8, 0)
+  modeBadge:SetHeight(18)
+  modeBadge:SetNormalFontObject("GameFontHighlightSmall")
+  modeBadge:SetHighlightFontObject("GameFontHighlightSmall")
+  modeBadge.text = modeBadge:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+  modeBadge.text:SetPoint("LEFT", modeBadge, "LEFT", 0, 0)
+  modeBadge.text:SetPoint("RIGHT", modeBadge, "RIGHT", 0, 0)
+  modeBadge.text:SetJustifyH("LEFT")
+  modeBadge:SetScript("OnEnter", function(btn)
+    if not GameTooltip then
+      return
+    end
+    local usingShared = NS.Profiles and NS.Profiles:IsOptedIn()
+    local tt = usingShared and (L.MODE_BADGE_ACCOUNT_TT or "") or (L.MODE_BADGE_CHARACTER_TT or "")
+    if not tt or tt == "" then
+      return
+    end
+    GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+    GameTooltip:SetText(tt, 1, 1, 1, true)
+  end)
+  modeBadge:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
+  f.modeBadge = modeBadge
+
   -- Help button
   local helpBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   helpBtn:SetSize(C.HELP_BTN_W, C.HELP_BTN_H)
@@ -318,6 +347,19 @@ local function CreateMainFrame()
   NS.RefreshMainUIForOptions()
 end
 
+function NS.RefreshModeBadge()
+  if not NS.frame or not NS.frame.modeBadge or not NS.frame.modeBadge.text then
+    return
+  end
+  local badge = NS.frame.modeBadge
+  local usingShared = NS.Profiles and NS.Profiles:IsOptedIn()
+  local label = usingShared and (L.MODE_BADGE_ACCOUNT or "(Account-wide)") or (L.MODE_BADGE_CHARACTER or "(Character)")
+  badge.text:SetText(label)
+  local width = (badge.text:GetStringWidth() or 0) + 12
+  badge:SetWidth(math.max(width, 90))
+  badge:SetHitRectInsets(0, -8, -4, -4)
+end
+
 -- Apply UI prefs to the already-built main frame
 function NS.RefreshMainUIForOptions()
   if not NS.frame then
@@ -327,6 +369,7 @@ function NS.RefreshMainUIForOptions()
   local showHelp = WinterChecklistDB.ui and (WinterChecklistDB.ui.showHelp ~= false)
   NS.frame.helpBtn:SetShown(showHelp)
   NS.frame:SetAlpha(locked and 0.97 or 1.0)
+  NS.RefreshModeBadge()
 end
 
 -- ------------------------------------------------------------------------------
@@ -389,8 +432,13 @@ ev:RegisterEvent("PLAYER_LOGIN")
 ev:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     apply_defaults(WinterChecklistDB, DEFAULTS)
-    WinterChecklistDB.accountWide = WinterChecklistDB.accountWide or true -- default ON per user
+    if NS.Profiles and NS.Profiles.Init then
+      NS.Profiles:Init()
+    end
   elseif event == "PLAYER_LOGIN" then
+    if NS.Profiles and NS.Profiles.ApplyActive then
+      NS.Profiles:ApplyActive()
+    end
     CreateMainFrame()
     if NS.BootstrapUIList then
       NS.BootstrapUIList()

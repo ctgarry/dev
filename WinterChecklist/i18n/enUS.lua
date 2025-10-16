@@ -34,7 +34,10 @@ L.EMPTY_STATE_FILTERED = "No tasks match the current filters."
 L.OPT_PANEL_TITLE = L.ADDON_NAME
 L.OPT_MINIMAP = "Show minimap icon"
 L.OPT_ACCOUNT_WIDE = "Account-wide tasks"
-L.OPT_ACCOUNT_WIDE_TT = "Use one checklist for all characters on this account (not per character)."
+L.OPT_ACCOUNT_WIDE_TT = "Use the shared account-wide checklist for this character. Turn it off to stay on the personal list."
+L.OPT_ACCOUNT_WIDE_HELP_TT = "How account-wide tasks behave."
+L.OPT_ACCOUNT_WIDE_HELP_BODY =
+  "When enabled, tasks are read and written to a single account-wide list.\n• Opt in per character\n• Personal lists remain intact\n• First enable lets you Copy, Merge, or Skip\n• Disabling resumes the personal list\n• Press Escape during the prompt to cancel the toggle\n• No data is ever deleted automatically"
 L.OPT_DEBUG = "Enable debug logging"
 L.OPT_LOCK_FRAME = "Lock main window (disable drag)"
 L.OPT_DOUBLE_WIDE = "Double-wide layout"
@@ -90,7 +93,8 @@ L.TASK_NOTES = "Task Notes"
 L.HELP_TITLE = "WinterChecklist Help"
 L.HELP_SUMMARY_TITLE = "WinterChecklist — Quick Summary"
 L.HELP_BUTTON = L.HELP
-L.HELP_SUMMARY_BODY = "Track short checklist items per character. Resize the window, filter tasks up top, and use the footer buttons to add, import, or export tasks."
+L.HELP_SUMMARY_BODY =
+  "Track short checklist items per character or share them account-wide. Use the 'Account-wide tasks' checkbox near the filters (or /wcl account) to opt in per character, resize the window, filter tasks up top, and use the footer buttons to add, import, or export tasks."
 L.HELP_WELCOME =
   "Welcome to WinterChecklist! This addon helps you keep track of short checklist items per character, such as holiday event tasks, profession cooldowns, or other repeatable tasks."
 L.HELP_USING = "Using WinterChecklist"
@@ -112,6 +116,31 @@ L.HELP_FEEDBACK_BODY =
   "If you have any questions, suggestions, or encounter any issues, please visit the addon's page on CurseForge or GitHub to leave feedback or report bugs. Your input is valuable and helps improve the addon!"
 L.HELP_CLOSE = L.CLOSE
 L.HELP_THANKS = "Thank you for using WinterChecklist! Happy task tracking!"
+
+-- Shared list
+L.SHARED_LIST_LABEL = "Account-wide tasks"
+L.SHARED_LIST_TT =
+  "Toggle whether this character reads and writes the shared account-wide checklist. Disable to stay per-character."
+L.SHARED_SEED_PROMPT =
+  "Enable the shared list for %s?\nCopy replaces the shared list with this character's tasks.\nMerge adds this character's tasks alongside the shared list.\nSkip keeps the shared list as-is.\nPress Escape to cancel and stay on the personal list."
+L.SHARED_SEED_PROMPT_EXISTING =
+  "Enable the shared list for %s?\nThe shared list already has tasks.\nCopy replaces the shared list with this character.\nMerge keeps the shared list and adds this character's tasks.\nSkip leaves everything unchanged.\nPress Escape to cancel and stay on the personal list."
+L.SHARED_SEED_COPY = "Copy"
+L.SHARED_SEED_MERGE = "Merge"
+L.SHARED_SEED_SKIP = "Skip"
+L.SHARED_SEED_COPY_DONE = "Copied %s's tasks into the Account-wide list."
+L.SHARED_SEED_MERGE_DONE = "Merged %s's tasks into the Account-wide list."
+L.SHARED_DISABLED_COPY = "%s now keeps a private copy of the shared list."
+L.SHARED_DISABLED = "Account-wide disabled for %s. Resumed personal list."
+L.MODE_BADGE_ACCOUNT = "(Account-wide)"
+L.MODE_BADGE_CHARACTER = "(Character)"
+L.MODE_BADGE_ACCOUNT_TT = "This character reads and writes the shared account-wide checklist."
+L.MODE_BADGE_CHARACTER_TT = "This character is using its personal checklist."
+L.SHARED_STATUS_ON = "Account-wide tasks are enabled for this character."
+L.SHARED_STATUS_OFF = "Account-wide tasks are disabled for this character."
+L.SHARED_STATUS_PENDING =
+  "Account-wide enable requested. Respond to the Copy/Merge/Skip prompt to finish opting in."
+L.SLASH_ACCOUNT_USAGE = "Use /wcl account on|off|toggle|status to control account-wide tasks per character."
 
 -- Task management (Filters)
 L.FILTER_FREQ_ALL = "All"
@@ -251,6 +280,7 @@ L.SLASH_TOGGLE = "/wcl toggle      - Show/hide the main window"
 L.SLASH_DEBUG = "/wcl debug       - Toggle debug logging"
 L.SLASH_MINIMAP = "/wcl minimap     - Toggle the minimap icon"
 L.SLASH_OPTIONS = "/wcl options     - Open the options dialog"
+L.SLASH_ACCOUNT = "/wcl account     - Control account-wide tasks (on/off/toggle/status)"
 L.SLASH_HELP = "/wcl help        - Show this help message"
 L.SLASH_IMPORT = "/wcl import      - Open the import dialog"
 L.SLASH_EXPORT = "/wcl export      - Open the export dialog"

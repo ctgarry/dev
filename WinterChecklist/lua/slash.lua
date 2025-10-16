@@ -58,6 +58,49 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     elseif NS.Tasks and NS.Tasks.ImportWithPrompt then
       NS.Tasks:ImportWithPrompt(data)
     end
+  elseif cmd == "account" or cmd == "shared" then
+    if not NS.Profiles or not NS.Profiles.IsOptedIn or not NS.Profiles.SetOptIn then
+      return
+    end
+    local arg = (rest or ""):lower()
+    local current = NS.Profiles:IsOptedIn()
+    local desired
+    local showStatusOnly = false
+    if arg == "on" or arg == "enable" or arg == "true" then
+      desired = true
+    elseif arg == "off" or arg == "disable" or arg == "false" then
+      desired = false
+    elseif arg == "status" or arg == "state" then
+      desired = current
+      showStatusOnly = true
+    elseif arg == "toggle" or arg == "" then
+      desired = not current
+    else
+      if NS.Print and L.SLASH_ACCOUNT_USAGE then
+        NS:Print(L.SLASH_ACCOUNT_USAGE)
+      elseif print and L.SLASH_ACCOUNT_USAGE then
+        print(L.SLASH_ACCOUNT_USAGE)
+      end
+      return
+    end
+
+    local msg
+    if showStatusOnly then
+      msg = current and L.SHARED_STATUS_ON or L.SHARED_STATUS_OFF
+    else
+      NS.Profiles:SetOptIn(desired)
+      local usingShared = NS.Profiles:IsOptedIn()
+      if desired and not usingShared then
+        msg = L.SHARED_STATUS_PENDING or L.SHARED_STATUS_OFF
+      else
+        msg = usingShared and L.SHARED_STATUS_ON or L.SHARED_STATUS_OFF
+      end
+    end
+    if msg and NS.Print then
+      NS:Print(msg)
+    elseif msg and print then
+      print(msg)
+    end
   elseif cmd == "help" or cmd == "?" then
     if NS.Help then
       NS.Help:Show(NS.frame)
@@ -68,6 +111,7 @@ SlashCmdList["WINTERCHECKLIST"] = function(msg)
     NS:Print("  " .. L.SLASH_DEBUG)
     NS:Print("  " .. L.SLASH_MINIMAP)
     NS:Print("  " .. L.SLASH_OPTIONS)
+    NS:Print("  " .. L.SLASH_ACCOUNT)
     NS:Print("  /wcl export - Export your tasks")
     NS:Print("  /wcl import <paste> - Import tasks (omit <paste> to open a popup)")
   end

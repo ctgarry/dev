@@ -8,6 +8,7 @@ local L = NS.L or {}
 
 local Tasks = NS.Tasks or {}
 NS.Tasks = Tasks
+local ACCOUNT_KEY = "Account-Wide"
 
 local function charKey()
   local name, realm = UnitFullName and UnitFullName("player")
@@ -19,15 +20,24 @@ end
 local function ensureDB()
   WinterChecklistDB = WinterChecklistDB or {}
   WinterChecklistDB.chars = WinterChecklistDB.chars or {}
-  if WinterChecklistDB.accountWide == nil then
-    WinterChecklistDB.accountWide = false
+  WinterChecklistDB.sharedList = WinterChecklistDB.sharedList or {}
+  local shared = WinterChecklistDB.sharedList
+  shared.optIn = shared.optIn or {}
+  shared.seeded = shared.seeded or {}
+  shared.tasks = shared.tasks or {}
+end
+
+local function usingSharedList()
+  if NS.Profiles and NS.Profiles.IsOptedIn then
+    return NS.Profiles:IsOptedIn()
   end
+  return not not WinterChecklistDB.accountWide
 end
 
 local function activeKey()
   ensureDB()
-  if WinterChecklistDB.accountWide then
-    return "Account-Wide"
+  if usingSharedList() then
+    return ACCOUNT_KEY
   end
   return charKey()
 end
@@ -80,7 +90,17 @@ local function ensureRecord(key)
     rec = {}
     WinterChecklistDB.chars[key] = rec
   end
-  rec.tasks = sanitizeTasks(rec.tasks or {})
+  if key == ACCOUNT_KEY then
+    local shared = WinterChecklistDB.sharedList
+    local source = rec.tasks or shared.tasks
+    if type(shared.tasks) == "table" and next(shared.tasks) ~= nil and (not rec.tasks or next(rec.tasks) == nil) then
+      source = shared.tasks
+    end
+    rec.tasks = sanitizeTasks(source or {})
+    shared.tasks = rec.tasks
+  else
+    rec.tasks = sanitizeTasks(rec.tasks or {})
+  end
   return key, rec
 end
 
@@ -90,7 +110,14 @@ local function getRecordFor(key)
   if not rec then
     return key, nil
   end
-  rec.tasks = sanitizeTasks(rec.tasks or {})
+  if key == ACCOUNT_KEY then
+    local shared = WinterChecklistDB.sharedList
+    local source = rec.tasks or shared.tasks
+    rec.tasks = sanitizeTasks(source or {})
+    shared.tasks = rec.tasks
+  else
+    rec.tasks = sanitizeTasks(rec.tasks or {})
+  end
   return key, rec
 end
 
@@ -165,12 +192,15 @@ function Tasks.CopyFromCharacter(_, fromKey)
   if not fromKey or fromKey == "" then
     return false
   end
-  local _, mine = ensureRecord()
+  local key, mine = ensureRecord()
   local _, from = getRecordFor(fromKey)
   if not from or not from.tasks then
     return false
   end
   mine.tasks = cloneTasks(from.tasks)
+  if key == ACCOUNT_KEY then
+    WinterChecklistDB.sharedList.tasks = mine.tasks
+  end
   notify("COPY")
   return true
 end

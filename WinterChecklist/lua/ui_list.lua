@@ -8,16 +8,15 @@ local U, L = NS.Util, NS.L
 NS.UIList = NS.UIList or {}
 local M = NS.UIList
 
-local ROW_H = 24
+local ROW_H = 22
 local ROW_GAP = 4
-local FOOTER_H = 40
+local FOOTER_H = 44
 local HEADER_GAP = 6
 local SCROLL_PAD = 6
-local CHECKBOX_SIZE = 20
+local CHECKBOX_SIZE = 18
 
-local EDITW = 260
-local BTN_W = 96
-local DD_W = 128
+local EDITW = 280
+local BTN_W = 100
 
 local function freqMatch(row, want)
   if want == "all" then
@@ -93,34 +92,53 @@ function M:Init(parent)
   end)
   self.btnClear = clearBtn
 
-  local freq = CreateFrame("Frame", nil, header, "UIDropDownMenuTemplate")
-  self.freq = freq
   self.freqValue = "all"
-  UIDropDownMenu_SetWidth(freq, DD_W)
-  UIDropDownMenu_SetText(freq, L.FILTER_FREQ_ALL or "All (freq)")
-  UIDropDownMenu_Initialize(freq, function()
-    local function add(label, value)
-      local info = UIDropDownMenu_CreateInfo()
-      info.text = label
-      info.func = function()
-        M.freqValue = value
-        UIDropDownMenu_SetText(freq, label)
-        M:Refresh()
-      end
-      info.checked = (M.freqValue == value)
-      UIDropDownMenu_AddButton(info)
-    end
-    add(L.FILTER_FREQ_ALL or "All (freq)", "all")
-    add(L.FILTER_FREQ_DAILY or "Daily", "daily")
-    add(L.FILTER_FREQ_WEEKLY or "Weekly", "weekly")
-  end)
+  local freqRow = CreateFrame("Frame", nil, header)
+  freqRow:SetHeight(ROW_H)
+  self.freqRow = freqRow
+  self.freqButtons = {}
 
-  local inc = CreateFrame("CheckButton", nil, header, "UICheckButtonTemplate")
+  local freqOptions = {
+    { value = "all", label = L.FILTER_FREQ_ALL or "All" },
+    { value = "daily", label = L.FILTER_FREQ_DAILY or "Daily" },
+    { value = "weekly", label = L.FILTER_FREQ_WEEKLY or "Weekly" },
+  }
+  local prevRadio
+  for _, opt in ipairs(freqOptions) do
+    local radio = CreateFrame("CheckButton", nil, freqRow, "UIRadioButtonTemplate")
+    if radio.text then
+      radio.text:SetText(opt.label)
+      radio.text:SetFontObject("GameFontHighlightSmall")
+    end
+    radio:SetHitRectInsets(0, -8, 0, 0)
+    if prevRadio then
+      radio:SetPoint("LEFT", prevRadio, "RIGHT", 12, 0)
+    else
+      radio:SetPoint("LEFT", freqRow, "LEFT", 0, 0)
+    end
+    radio:SetScript("OnClick", function(btn)
+      if not btn:GetChecked() then
+        btn:SetChecked(true)
+        return
+      end
+      PlaySound(SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 857)
+      M:SetFrequency(opt.value)
+    end)
+    self.freqButtons[opt.value] = radio
+    prevRadio = radio
+  end
+
+  local inc = CreateFrame("CheckButton", nil, freqRow, "UICheckButtonTemplate")
   inc.text:SetText(L.FILTER_INCOMPLETE or "Incomplete")
-  inc:SetScript("OnClick", function()
+  inc.text:SetFontObject("GameFontHighlightSmall")
+  inc:SetPoint("LEFT", prevRadio, "RIGHT", 20, 0)
+  inc:SetHitRectInsets(0, -8, 0, 0)
+  inc:SetScript("OnClick", function(selfBtn)
+    PlaySound(SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 857)
     M:Refresh()
   end)
   self.onlyIncomplete = inc
+  self:SetFrequency("all")
 
   local footer = CreateFrame("Frame", nil, container)
   footer:SetHeight(FOOTER_H)
@@ -261,31 +279,76 @@ local function ensureRow(index, parent)
   row:SetHeight(ROW_H)
 
   row.chk = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-  row.chk:SetPoint("LEFT", 0, 0)
+  row.chk:ClearAllPoints()
+  row.chk:SetPoint("LEFT", row, "LEFT", 0, 0)
+  row.chk:SetPoint("TOP", row, "TOP", 0, -2)
   row.chk:SetSize(CHECKBOX_SIZE, CHECKBOX_SIZE)
   row.chk:SetHitRectInsets(0, -6, 0, 0)
 
-  local function mkBtn(width)
+  local function mkTextBtn(width, label)
     local b = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    b:SetSize(width, ROW_H - 6)
+    b:SetSize(width, ROW_H - 4)
+    b:SetText(label)
+    return b
+  end
+  local function mkIconBtn(direction, tooltip)
+    local b = CreateFrame("Button", nil, row, "UIPanelSquareButton")
+    b:SetSize(18, 18)
+    b:SetMotionScriptsWhileDisabled(true)
+    if SquareButton_SetIcon then
+      SquareButton_SetIcon(b, direction)
+    else
+      b:SetText(direction == "UP" and "^" or "v")
+    end
+    if tooltip then
+      b:SetScript("OnEnter", function(btn)
+        if GameTooltip then
+          GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+          GameTooltip:SetText(tooltip, 1, 1, 1, true)
+        end
+      end)
+      b:SetScript("OnLeave", function()
+        if GameTooltip then
+          GameTooltip:Hide()
+        end
+      end)
+    end
     return b
   end
 
-  row.btnDel = mkBtn(32)
+  row.btnDel = mkTextBtn(26, L.DELETE_SHORT or "X")
   row.btnDel:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-  row.btnDel:SetText(L.DELETE_SHORT or "X")
+  row.btnDel:SetScript("OnEnter", function(btn)
+    if GameTooltip then
+      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+      GameTooltip:SetText(L.DELETE_TASK or "Delete task", 1, 0.2, 0.2, true)
+    end
+  end)
+  row.btnDel:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
 
-  row.btnEdit = mkBtn(48)
-  row.btnEdit:SetPoint("RIGHT", row.btnDel, "LEFT", -6, 0)
-  row.btnEdit:SetText(L.EDIT or "Edit")
+  row.btnEdit = mkTextBtn(40, L.EDIT_SHORT or L.EDIT or "Edit")
+  row.btnEdit:SetPoint("RIGHT", row.btnDel, "LEFT", -4, 0)
+  row.btnEdit:SetScript("OnEnter", function(btn)
+    if GameTooltip then
+      GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+      GameTooltip:SetText(L.EDIT_TASK or "Edit task", 1, 1, 1, true)
+    end
+  end)
+  row.btnEdit:SetScript("OnLeave", function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
 
-  row.btnDown = mkBtn(40)
+  row.btnDown = mkIconBtn("DOWN", L.MOVE_DOWN or "Move down")
   row.btnDown:SetPoint("RIGHT", row.btnEdit, "LEFT", -6, 0)
-  row.btnDown:SetText(L.MOVE_DOWN or "Down")
 
-  row.btnUp = mkBtn(40)
-  row.btnUp:SetPoint("RIGHT", row.btnDown, "LEFT", -6, 0)
-  row.btnUp:SetText(L.MOVE_UP or "Up")
+  row.btnUp = mkIconBtn("UP", L.MOVE_UP or "Move up")
+  row.btnUp:SetPoint("RIGHT", row.btnDown, "LEFT", -4, 0)
 
   row.txt = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   row.txt:SetPoint("LEFT", row.chk, "RIGHT", 6, 0)
@@ -295,6 +358,20 @@ local function ensureRow(index, parent)
 
   M.rows[index] = row
   return row
+end
+
+function M:SetFrequency(freq)
+  self.freqValue = freq or "all"
+  if self.freqButtons then
+    for value, radio in pairs(self.freqButtons) do
+      if radio.SetChecked then
+        radio:SetChecked(value == self.freqValue)
+      end
+    end
+  end
+  if self.Refresh then
+    self:Refresh()
+  end
 end
 
 function M:Refresh()
@@ -439,19 +516,14 @@ function M:Layout(parent)
     self.btnClear:SetWidth(32)
   end
 
-  if self.freq then
-    self.freq:ClearAllPoints()
-    local anchor = self.btnClear or self.search
-    self.freq:SetPoint("LEFT", anchor, "RIGHT", 12, -2)
-    UIDropDownMenu_SetWidth(self.freq, DD_W)
-  end
-
-  if self.onlyIncomplete then
-    self.onlyIncomplete:ClearAllPoints()
-    self.onlyIncomplete:SetPoint("LEFT", self.freq, "RIGHT", 8, 0)
-    if self.onlyIncomplete.text and self.onlyIncomplete.text.SetTextColor then
-      self.onlyIncomplete.text:SetTextColor(1, 1, 1)
-    end
+  local freqHeight = 0
+  if self.freqRow and self.search then
+    self.freqRow:ClearAllPoints()
+    self.freqRow:SetPoint("TOPLEFT", self.search, "BOTTOMLEFT", 0, -8)
+    local anchorRight = self.btnClear or self.search
+    self.freqRow:SetPoint("RIGHT", anchorRight, "RIGHT", 0, 0)
+    self.freqRow:SetHeight(ROW_H)
+    freqHeight = ROW_H + 8
   end
 
   if self.footer then
@@ -490,7 +562,7 @@ function M:Layout(parent)
   end
 
   if self.scrollFrame and self.footer then
-    local topOffset = labelHeight + HEADER_GAP + ROW_H + HEADER_GAP
+    local topOffset = labelHeight + HEADER_GAP + ROW_H + HEADER_GAP + freqHeight + HEADER_GAP
     self.scrollFrame:ClearAllPoints()
     self.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -topOffset)
     self.scrollFrame:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -topOffset)

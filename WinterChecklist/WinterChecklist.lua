@@ -36,10 +36,10 @@ local L = NS.L
 WinterChecklistDB = WinterChecklistDB or {}
 
 -- Constants -------------------------------------------------------------------
-C.FRAME_W_DEFAULT = 420
-C.FRAME_H_DEFAULT = 320
-C.FRAME_W_MIN = 320
-C.FRAME_H_MIN = 220
+C.FRAME_W_DEFAULT = 460
+C.FRAME_H_DEFAULT = 360
+C.FRAME_W_MIN = C.FRAME_W_DEFAULT
+C.FRAME_H_MIN = C.FRAME_H_DEFAULT
 C.FRAME_W_MAX = 720
 C.FRAME_H_MAX = 520
 C.HELP_BTN_W = 24
@@ -47,12 +47,12 @@ C.HELP_BTN_H = 20
 C.TITLE_MARGIN_X = 12
 C.TITLE_MARGIN_Y = -10
 C.BACKDROP = {
-  bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-  edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-  tile = true,
-  tileSize = 16,
-  edgeSize = 12,
-  insets = { left = 3, right = 3, top = 3, bottom = 3 },
+  bgFile = "Interface\\FrameGeneral\\UI-Background-Marble",
+  edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+  tile = false,
+  tileSize = 0,
+  edgeSize = 16,
+  insets = { left = 12, right = 12, top = 12, bottom = 12 },
 }
 
 -- LibSharedMedia --------------------------------------------------------------
@@ -198,8 +198,11 @@ local function CreateMainFrame()
   local f = CreateFrame("Frame", ADDON .. "MainFrame", UIParent, "BackdropTemplate")
   f:SetSize(WinterChecklistDB.frame.w, WinterChecklistDB.frame.h)
   f:SetBackdrop(C.BACKDROP)
-  if f.SetResizable then
-    f:SetResizable(true)
+  if f.SetBackdropColor then
+    f:SetBackdropColor(0.07, 0.07, 0.1, 0.95)
+  end
+  if f.SetBackdropBorderColor then
+    f:SetBackdropBorderColor(0.8, 0.65, 0.3, 1)
   end
   apply_resize_bounds(f)
   restore_position(f)
@@ -249,49 +252,18 @@ local function CreateMainFrame()
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", 0, 0)
 
-  local resize = CreateFrame("Button", nil, f)
-  resize:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 6)
-  resize:SetSize(16, 16)
-  resize:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-  resize:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
-  resize:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
-  resize:SetScript("OnMouseDown", function(self, button)
-    if button == "LeftButton" and self:GetParent().StartSizing then
-      self:GetParent():StartSizing("BOTTOMRIGHT")
-    end
-  end)
-  resize:SetScript("OnMouseUp", function(self, button)
-    if button == "LeftButton" then
-      local parent = self:GetParent()
-      if parent.StopMovingOrSizing then
-        parent:StopMovingOrSizing()
+    f:SetScript("OnSizeChanged", function(self, width, height)
+      local clampedW, clampedH = clamp_resize(self, width, height)
+      if clampedW ~= width or clampedH ~= height then
+        self:SetSize(clampedW, clampedH)
+        width, height = clampedW, clampedH
       end
-      local w, h = parent:GetWidth(), parent:GetHeight()
-      local clampedW, clampedH = clamp_resize(parent, w, h)
-      if clampedW ~= w or clampedH ~= h then
-        parent:SetSize(clampedW, clampedH)
+      WinterChecklistDB.frame.w = width
+      WinterChecklistDB.frame.h = height
+      if self._OnFrameSized then
+        self:_OnFrameSized()
       end
-      WinterChecklistDB.frame.w = clampedW
-      WinterChecklistDB.frame.h = clampedH
-      store_position(parent)
-      if parent._OnFrameSized then
-        parent:_OnFrameSized()
-      end
-    end
-  end)
-
-  f:SetScript("OnSizeChanged", function(self, width, height)
-    local clampedW, clampedH = clamp_resize(self, width, height)
-    if clampedW ~= width or clampedH ~= height then
-      self:SetSize(clampedW, clampedH)
-      width, height = clampedW, clampedH
-    end
-    WinterChecklistDB.frame.w = width
-    WinterChecklistDB.frame.h = height
-    if self._OnFrameSized then
-      self:_OnFrameSized()
-    end
-  end)
+    end)
 
   NS.frame = f
   if WinterChecklistDB.frame.shown then

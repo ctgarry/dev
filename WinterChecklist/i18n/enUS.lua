@@ -109,10 +109,10 @@ L.HELP_CLOSE = L.CLOSE
 L.HELP_THANKS = "Thank you for using WinterChecklist! Happy task tracking!"
 
 -- Task management (Filters)
-L.FILTER_FREQ_ALL = "Filter Freq All"
-L.FILTER_FREQ_DAILY = "Filter Freq Daily"
-L.FILTER_FREQ_WEEKLY = "Filter Freq Weekly"
-L.FILTER_INCOMPLETE = "Filter Incomplete"
+L.FILTER_FREQ_ALL = "All"
+L.FILTER_FREQ_DAILY = "Daily"
+L.FILTER_FREQ_WEEKLY = "Weekly"
+L.FILTER_INCOMPLETE = "Incomplete only"
 L.FILTER_COMPLETE = "Filter Complete"
 L.FILTER_RESET = "Filter Reset"
 L.FILTER_SECTION = "Filters"
@@ -125,9 +125,12 @@ L.CLEAR_TASKS_TT = "Remove all tasks in the active profile."
 L.CLEAR_ALL = "Clear all tasks?"
 L.ADD_TASK = "Add Task"
 L.EDIT_TASK = "Edit Task"
+L.EDIT_SHORT = "Edit"
 L.DELETE_TASK = "Delete Task"
 L.MARK_COMPLETE = "Mark Complete"
 L.MARK_INCOMPLETE = "Mark Incomplete"
+L.MOVE_UP_SHORT = "Up"
+L.MOVE_DOWN_SHORT = "Down"
 
 -- Task management (Options)
 L.TASK_FREQUENCY = "Task Frequency"

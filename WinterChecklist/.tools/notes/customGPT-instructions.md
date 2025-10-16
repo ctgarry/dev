@@ -98,6 +98,7 @@ Protect user work across iterations and pair every export with recovery guidance
    - Download each `.md`, confirm content, then zip; if zipping fails the markdowns remain local.
 6. **Safe Export Checklist**
    - Before "Package this iteration" ensure: files 00-09 shown inline, each >200 bytes, smart output still disabled, optional downloads spot-checked.
+   - Always generate and package only fully rendered Markdown files — placeholders or stub text are strictly forbidden in any .zip export.
 7. **Safe Edition Workflow**
    - Generate files 00→09, display inline, confirm completeness, then run the validated packaging command so the zip matches what was shown.
 8. **Safety-Net Mode v2 Block**

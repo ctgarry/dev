@@ -5,30 +5,13 @@ _Status: Build 022 (Classic Era reload test)_
 ## Outstanding Issues
 
 ### Layout & Styling
-- [x] **High** - Footer data actions (Clear/Export/Import) should live in Options, not on the main window.
-- [x] **Medium** - ScrollFrame needs a visible scrollbar alongside mouse wheel support.
-- [x] **Medium** - Parchment should fill edge-to-edge; remove remaining black gutters/transparent seams.
-- [x] **Medium** - Nested container borders are showing mid-panel; flatten or hide redundant frames.
-- [x] **Low** - Current edit quill reads as a horn/bugle; source a clearer pencil/quill icon.
 - [ ] **Medium** - Footer action buttons clash (bold red) against parchment; restyle to match Blizzard theme.
-- [x] **High** - Main window should not resize.
-- [x] **Medium** - Main window border should match Blizzard dialog styling.
-  - Marble background + dialog border with warm tint now style the shell.
-- [x] **Medium** - Task row buttons were oversized and labels too verbose.
-  - Compact icon/text buttons now handle edit/move/delete.
-- [x] **Medium** - Frequency filter should use radio buttons under the search bar.
-  - Inline radios + checkbox row replace the dropdown for faster filtering.
-- [x] **Medium** - Marble backdrop/warm tint barely visible; central pane renders nearly black with transparent margins.
-  - Added parchment inset with drop shadow so the list panel reads as parchment instead of solid black.
-- [x] **Medium** - Default frame should mirror Blizzard dialog proportions (narrower/taller) with an Options toggle for "double-wide" display; keep frame non-resizable.
-  - Frame now opens at Blizzard dialog scale with a new "Double-wide layout" option in the panel.
-- [x] **Low** - Replace Edit text button with a Classic-safe pencil icon (current attempts draw a square fallback).
-  - Swapped to the guild MOTD quill icon, applied via square button template for consistent theming.
-- [x] **Low** - Delete button should use a lowercase `x` to match Blizzard microbuttons.
-  - Updated localization to render the footer delete as a lowercase x.
-- [x] **Medium** - Frequency radio row spacing overlaps labels and the "Incomplete only" checkbox.
-  - Re-anchored the radio row so labels breathe and the checkbox sits clear of the last option.
-
+- [ ] **Medium** - Inner parchment still shows dark stone texture; fill should span edge-to-edge.
+- [ ] **Medium** - Filter bar styling feels unfinished; clear button should match parchment theme.
+- [ ] **Medium** - "Incomplete only" checkbox is misaligned; keep inline with frequency radios.
+- [ ] **Medium** - Task row icons need distinct art; current yellow buttons read identical.
+- [ ] **Medium** - Shift row action cluster right to free width for task text.
+- [ ] **Medium** - Primary Add button needs palette aligned with parchment theme.
 ### Interaction & UX
 - [ ] **Medium** - Help popup should close on ESC.
   - Hook keyboard handler or reuse Blizzard close behavior.
@@ -85,4 +68,11 @@ _Status: Build 022 (Classic Era reload test)_
 - Task data actions now live in Options (clear/export/import) instead of the main footer.
 - ScrollFrame shows a visible scrollbar alongside mouse wheel scrolling.
 - Parchment background fills edge-to-edge without black gutters or extra borders.
+- Flattened inner borders so only the parchment panel remains.
+- Edit button uses a Classic-safe quill icon.
+- Delete buttons now show lowercase x styling.
+- Frequency radios spaced cleanly; checkbox no longer overlaps.
+- Default frame matches Blizzard dialog with double-wide toggle.
+
+
 

@@ -1,0 +1,26 @@
+# 06-i18n-keys — enUS Intent (Keys Only)
+
+```
+feature.title = "Pet Cloud"
+feature.help = "Filter pets by mood and tags."
+cloud.scope.owned = "Owned"
+cloud.scope.unowned = "Unowned"
+cloud.scope.all = "All"
+cloud.logic.and = "Match all tags"
+cloud.logic.or = "Match any tag"
+cloud.clear = "Clear All"
+cloud.search.placeholder = "Search name or alias…"
+bookmark.save = "Save Bookmark"
+bookmark.saved.toast = "Bookmark saved"
+bookmark.load = "Load"
+bookmark.export = "Export"
+bookmark.import = "Import"
+import.title = "Import Bookmark"
+import.paste.placeholder = "Paste code…"
+import.preview = "Preview"
+import.invalid = "Invalid import string"
+share.account = "Available on all characters"
+error.catalog.missing = "Catalog missing or outdated"
+hint.tag.aliases = "Also known as: {aliases}"
+metric.catalog.age = "Catalog age: {days}d"
+```

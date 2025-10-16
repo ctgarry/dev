@@ -1,0 +1,25 @@
+## Interface: 110100
+## Title: WinterPetCloud (Retail)
+## Notes: Retail build
+## Author: CTGarry
+## Version: 1.0.0
+## SavedVariables: WinterPetCloudDB
+
+## OptionalDeps: LibDataBroker-1.1, LibDBIcon-1.0
+lib/LibDataBroker-1.1/LibDataBroker-1.1.lua
+lib/LibDBIcon-1.0/LibDBIcon-1.0.lua
+lib/LibStub/LibStub.lua
+lib/LibSharedMedia-3.0/LibSharedMedia-3.0.lua
+lib/CallbackHandler-1.0/CallbackHandler-1.0.lua
+
+lua/utils.lua
+i18n/enUS.lua
+WinterPetCloud.lua
+lua/profiles.lua
+lua/minimap.lua
+lua/tasks.lua
+lua/options.lua
+lua/help.lua
+lua/slash.lua
+lua/ui_list.lua
+lua/hello.lua

@@ -1,0 +1,42 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node / tooling caches (future-proof)
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# VS Code
+.vscode/*
+!.vscode/tasks.json
+/.hererocks/
+
+# Local build & artifacts
+.dist/
+*.zip
+
+# Temp staging (used by build script)
+# (uses %TEMP%\WinterPetCloud_stage, but ignore just in case)
+*_stage/
+tmp/
+temp/
+
+# Logs
+*.log
+
+# Images or exports you don't want in repo (opt-in later)
+# screenshots/
+# exports/
+
+# WoW-specific local paths (avoid checking live installs by accident)
+# Adjust if you sometimes develop inside the AddOns folder
+*_retail_/Interface/AddOns/WinterPetCloud/
+*_classic_era_/Interface/AddOns/WinterPetCloud/
+
+# Editor backups
+*.swp
+*.swo
+*~

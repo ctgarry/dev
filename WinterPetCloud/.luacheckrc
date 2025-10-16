@@ -1,0 +1,74 @@
+codes = true
+only = {
+  "111",
+  "112",
+  "113",
+  "121",
+  "122",
+  "211",
+  "212",
+  "213",
+  "214",
+}
+std = "lua54"
+exclude_files = {
+  "lib/**",
+}
+read_globals = {
+  "AddonCompartmentFrame",
+  "C_Timer",
+  "DEFAULT_CHAT_FRAME",
+  "GameFontHighlight",
+  "GameFontHighlightSmall",
+  "GameFontNormalLarge",
+  "GetAddOnMetadata",
+  "GetBuildInfo",
+  "GetCursorPosition",
+  "GetMinimapShape",
+  "GetRealmName",
+  "InterfaceOptionsFrame_OpenToCategory",
+  "InterfaceOptions_AddCategory",
+  "IsShiftKeyDown",
+  "Minimap",
+  "PlaySound",
+  "PlaySoundFile",
+  "SOUNDKIT",
+  "Settings",
+  "UIParent",
+  "UIDropDownMenu_AddButton",
+  "UIDropDownMenu_CreateInfo",
+  "UIDropDownMenu_Initialize",
+  "UIDropDownMenu_JustifyText",
+  "UIDropDownMenu_SetText",
+  "UIDropDownMenu_SetWidth",
+  "UnitFullName",
+  "UnitName",
+  "WOW_PROJECT_ID",
+  "WOW_PROJECT_MAINLINE",
+  "securecallfunction",
+  "loadstring",
+  "wipe",
+  "StaticPopup_Show",
+  "OKAY",
+  "CANCEL",
+}
+globals = {
+  "CreateFrame",
+  "LibStub",
+  "GetLocale",
+  "C_AddOns",
+  "GameTooltip",
+  "SlashCmdList",
+  "WinterPetCloud",
+  "WinterPetCloudDB",
+  "StaticPopupDialogs",
+  "SLASH_WINTERPETCLOUD1",
+  "SLASH_WPCHELLO1",
+}
+ignore = { "631" } -- allow unused loop vars when needed
+
+files = {
+  ["lua/hello.lua"] = {
+    ignore = { "211" }, -- prototype file keeps unused ADDON placeholder
+  },
+}

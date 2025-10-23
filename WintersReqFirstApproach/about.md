@@ -1,6 +1,6 @@
 **This is a customGPT for ChatGPT**
 It's published here:
-
+https://chatgpt.com/g/g-68f0bb30ef848191938f2909a2742ce8-winter-s-requirements-first-approach-lua-addons
 
 
 ### Name:
